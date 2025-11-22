@@ -8,19 +8,19 @@
 #include "handler.h"
 #include "utils.h"
 
-static inline void handle_funct7_slli(uint32_t inst, CPU_t *cpu) {
-  if (get_funct7(inst) == FUNCT7_SLLI)
+static inline void handle_op_imm_001(uint32_t inst, CPU_t *cpu) {
+  if (get_funct7(inst) == 0b0000000)
     handle_slli(inst, cpu);
   else
     handle_illegal_instruction(inst, cpu);
 }
 
-static inline void handle_funct7_srli_srai(uint32_t inst, CPU_t *cpu) {
+static inline void handle_op_imm_101(uint32_t inst, CPU_t *cpu) {
   switch (get_funct7(inst)) {
-  case FUNCT7_SRLI:
+  case 0b0000000:
     handle_srli(inst, cpu);
     break;
-  case FUNCT7_SRAI:
+  case 0b0100000:
     handle_srai(inst, cpu);
     break;
   default:
@@ -29,55 +29,89 @@ static inline void handle_funct7_srli_srai(uint32_t inst, CPU_t *cpu) {
   }
 }
 
-static inline void handle_funct7_add_sub(uint32_t inst, CPU_t *cpu) {
+static inline void handle_op_000(uint32_t inst, CPU_t *cpu) {
   switch (get_funct7(inst)) {
-  case FUNCT7_ADD:
+  case 0b0000000:
     handle_add(inst, cpu);
     break;
-  case FUNCT7_SUB:
+  case 0b0100000:
     handle_sub(inst, cpu);
     break;
+  case 0b0000001:
+    handle_mul(inst, cpu);
+    break;
   default:
     handle_illegal_instruction(inst, cpu);
     break;
   }
 }
 
-static inline void handle_funct7_sll(uint32_t inst, CPU_t *cpu) {
-  if (get_funct7(inst) == FUNCT7_SLL)
-    handle_sll(inst, cpu);
-  else
-    handle_illegal_instruction(inst, cpu);
-}
-
-static inline void handle_funct7_slt(uint32_t inst, CPU_t *cpu) {
-  if (get_funct7(inst) == FUNCT7_SLT)
-    handle_slt(inst, cpu);
-  else
-    handle_illegal_instruction(inst, cpu);
-}
-
-static inline void handle_funct7_sltu(uint32_t inst, CPU_t *cpu) {
-  if (get_funct7(inst) == FUNCT7_SLTU)
-    handle_sltu(inst, cpu);
-  else
-    handle_illegal_instruction(inst, cpu);
-}
-
-static inline void handle_funct7_xor(uint32_t inst, CPU_t *cpu) {
-  if (get_funct7(inst) == FUNCT7_XOR)
-    handle_xor(inst, cpu);
-  else
-    handle_illegal_instruction(inst, cpu);
-}
-
-static inline void handle_funct7_srl_sra(uint32_t inst, CPU_t *cpu) {
+static inline void handle_op_001(uint32_t inst, CPU_t *cpu) {
   switch (get_funct7(inst)) {
-  case FUNCT7_SRL:
+  case 0b0000000:
+    handle_sll(inst, cpu);
+    break;
+  case 0b0000001:
+    handle_mulh(inst, cpu);
+    break;
+  default:
+    handle_illegal_instruction(inst, cpu);
+    break;
+  }
+}
+
+static inline void handle_op_010(uint32_t inst, CPU_t *cpu) {
+  switch (get_funct7(inst)) {
+  case 0b0000000:
+    handle_slt(inst, cpu);
+    break;
+  case 0b0000001:
+    handle_mulhsu(inst, cpu);
+    break;
+  default:
+    handle_illegal_instruction(inst, cpu);
+    break;
+  }
+}
+
+static inline void handle_op_011(uint32_t inst, CPU_t *cpu) {
+  switch (get_funct7(inst)) {
+  case 0b0000000:
+    handle_sltu(inst, cpu);
+    break;
+  case 0b0000001:
+    handle_mulhu(inst, cpu);
+    break;
+  default:
+    handle_illegal_instruction(inst, cpu);
+    break;
+  }
+}
+
+static inline void handle_op_100(uint32_t inst, CPU_t *cpu) {
+  switch (get_funct7(inst)) {
+  case 0b0000000:
+    handle_xor(inst, cpu);
+    break;
+  case 0b0000001:
+    handle_div(inst, cpu);
+    break;
+  default:
+    handle_illegal_instruction(inst, cpu);
+    break;
+  }
+}
+
+static inline void handle_op_101(uint32_t inst, CPU_t *cpu) {
+  switch (get_funct7(inst)) {
+  case 0b0000000:
     handle_srl(inst, cpu);
     break;
-  case FUNCT7_SRA:
+  case 0b0100000:
     handle_sra(inst, cpu);
+    break;
+  case 0b0000001:
+    handle_divu(inst, cpu);
     break;
   default:
     handle_illegal_instruction(inst, cpu);
@@ -85,21 +119,35 @@ static inline void handle_funct7_srl_sra(uint32_t inst, CPU_t *cpu) {
   }
 }
 
-static inline void handle_funct7_or(uint32_t inst, CPU_t *cpu) {
-  if (get_funct7(inst) == FUNCT7_OR)
+static inline void handle_op_110(uint32_t inst, CPU_t *cpu) {
+  switch (get_funct7(inst)) {
+  case 0b0000000:
     handle_or(inst, cpu);
-  else
+    break;
+  case 0b0000001:
+    handle_rem(inst, cpu);
+    break;
+  default:
     handle_illegal_instruction(inst, cpu);
+    break;
+  }
 }
 
-static inline void handle_funct7_and(uint32_t inst, CPU_t *cpu) {
-  if (get_funct7(inst) == FUNCT7_AND)
+static inline void handle_op_111(uint32_t inst, CPU_t *cpu) {
+  switch (get_funct7(inst)) {
+  case 0b0000000:
     handle_and(inst, cpu);
-  else
+    break;
+  case 0b0000001:
+    handle_remu(inst, cpu);
+    break;
+  default:
     handle_illegal_instruction(inst, cpu);
+    break;
+  }
 }
 
-static inline void handle_ecall_ebreak(uint32_t inst, CPU_t *cpu) {
+static inline void handle_system_000(uint32_t inst, CPU_t *cpu) {
   if (get_rd(inst) == 0 && get_rs1(inst) == 0) {
     switch (get_imm_i(inst)) {
     case 0:
@@ -133,44 +181,44 @@ init_dispatch_table(InstructionHandler dispatch_table[128][8]) {
 
   dispatch_table[OPCODE_JALR][0] = handle_jalr;
 
-  dispatch_table[OPCODE_BRANCH][FUNCT3_BEQ] = handle_beq;
-  dispatch_table[OPCODE_BRANCH][FUNCT3_BNE] = handle_bne;
-  dispatch_table[OPCODE_BRANCH][FUNCT3_BLT] = handle_blt;
-  dispatch_table[OPCODE_BRANCH][FUNCT3_BGE] = handle_bge;
-  dispatch_table[OPCODE_BRANCH][FUNCT3_BLTU] = handle_bltu;
-  dispatch_table[OPCODE_BRANCH][FUNCT3_BGEU] = handle_bgeu;
+  dispatch_table[OPCODE_BRANCH][0b000] = handle_beq;
+  dispatch_table[OPCODE_BRANCH][0b001] = handle_bne;
+  dispatch_table[OPCODE_BRANCH][0b100] = handle_blt;
+  dispatch_table[OPCODE_BRANCH][0b101] = handle_bge;
+  dispatch_table[OPCODE_BRANCH][0b110] = handle_bltu;
+  dispatch_table[OPCODE_BRANCH][0b111] = handle_bgeu;
 
-  dispatch_table[OPCODE_LOAD][FUNCT3_LB] = handle_lb;
-  dispatch_table[OPCODE_LOAD][FUNCT3_LH] = handle_lh;
-  dispatch_table[OPCODE_LOAD][FUNCT3_LW] = handle_lw;
-  dispatch_table[OPCODE_LOAD][FUNCT3_LBU] = handle_lbu;
-  dispatch_table[OPCODE_LOAD][FUNCT3_LHU] = handle_lhu;
+  dispatch_table[OPCODE_LOAD][0b000] = handle_lb;
+  dispatch_table[OPCODE_LOAD][0b001] = handle_lh;
+  dispatch_table[OPCODE_LOAD][0b010] = handle_lw;
+  dispatch_table[OPCODE_LOAD][0b100] = handle_lbu;
+  dispatch_table[OPCODE_LOAD][0b101] = handle_lhu;
 
-  dispatch_table[OPCODE_STORE][FUNCT3_SB] = handle_sb;
-  dispatch_table[OPCODE_STORE][FUNCT3_SH] = handle_sh;
-  dispatch_table[OPCODE_STORE][FUNCT3_SW] = handle_sw;
+  dispatch_table[OPCODE_STORE][0b000] = handle_sb;
+  dispatch_table[OPCODE_STORE][0b001] = handle_sh;
+  dispatch_table[OPCODE_STORE][0b010] = handle_sw;
 
-  dispatch_table[OPCODE_OP_IMM][FUNCT3_ADDI] = handle_addi;
-  dispatch_table[OPCODE_OP_IMM][FUNCT3_SLTI] = handle_slti;
-  dispatch_table[OPCODE_OP_IMM][FUNCT3_SLTIU] = handle_sltiu;
-  dispatch_table[OPCODE_OP_IMM][FUNCT3_XORI] = handle_xori;
-  dispatch_table[OPCODE_OP_IMM][FUNCT3_ORI] = handle_ori;
-  dispatch_table[OPCODE_OP_IMM][FUNCT3_ANDI] = handle_andi;
-  dispatch_table[OPCODE_OP_IMM][FUNCT3_SLLI] = handle_funct7_slli;
-  dispatch_table[OPCODE_OP_IMM][FUNCT3_SRLI_SRAI] = handle_funct7_srli_srai;
+  dispatch_table[OPCODE_OP_IMM][0b000] = handle_addi;
+  dispatch_table[OPCODE_OP_IMM][0b010] = handle_slti;
+  dispatch_table[OPCODE_OP_IMM][0b011] = handle_sltiu;
+  dispatch_table[OPCODE_OP_IMM][0b100] = handle_xori;
+  dispatch_table[OPCODE_OP_IMM][0b110] = handle_ori;
+  dispatch_table[OPCODE_OP_IMM][0b111] = handle_andi;
+  dispatch_table[OPCODE_OP_IMM][0b001] = handle_op_imm_001;
+  dispatch_table[OPCODE_OP_IMM][0b101] = handle_op_imm_101;
 
-  dispatch_table[OPCODE_OP][FUNCT3_ADD_SUB] = handle_funct7_add_sub;
-  dispatch_table[OPCODE_OP][FUNCT3_SLL] = handle_funct7_sll;
-  dispatch_table[OPCODE_OP][FUNCT3_SLT] = handle_funct7_slt;
-  dispatch_table[OPCODE_OP][FUNCT3_SLTU] = handle_funct7_sltu;
-  dispatch_table[OPCODE_OP][FUNCT3_XOR] = handle_funct7_xor;
-  dispatch_table[OPCODE_OP][FUNCT3_SRL_SRA] = handle_funct7_srl_sra;
-  dispatch_table[OPCODE_OP][FUNCT3_OR] = handle_funct7_or;
-  dispatch_table[OPCODE_OP][FUNCT3_AND] = handle_funct7_and;
+  dispatch_table[OPCODE_OP][0b000] = handle_op_000;
+  dispatch_table[OPCODE_OP][0b001] = handle_op_001;
+  dispatch_table[OPCODE_OP][0b010] = handle_op_010;
+  dispatch_table[OPCODE_OP][0b011] = handle_op_011;
+  dispatch_table[OPCODE_OP][0b100] = handle_op_100;
+  dispatch_table[OPCODE_OP][0b101] = handle_op_101;
+  dispatch_table[OPCODE_OP][0b110] = handle_op_110;
+  dispatch_table[OPCODE_OP][0b111] = handle_op_111;
 
-  dispatch_table[OPCODE_MISC_MEM][FUNCT3_FENCE] = handle_fence;
+  dispatch_table[OPCODE_MISC_MEM][0b000] = handle_fence;
 
-  dispatch_table[OPCODE_SYSTEM][FUNCT3_ECALL_EBREAK] = handle_ecall_ebreak;
+  dispatch_table[OPCODE_SYSTEM][0b000] = handle_system_000;
 }
 
 #endif
