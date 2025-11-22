@@ -209,9 +209,15 @@ static inline void handle_and(uint32_t inst, CPU_t *cpu) {
   cpu->pc += 4;
 }
 
-static inline void handle_fence(uint32_t inst, CPU_t *cpu) { cpu->pc += 4; }
+static inline void handle_fence(uint32_t inst, CPU_t *cpu) {
+  (void)inst;
+
+  cpu->pc += 4;
+}
 
 static inline void handle_ecall(uint32_t inst, CPU_t *cpu) {
+  (void)inst;
+
   uint32_t syscall_num = read_reg(cpu, 17); // a7
 
   switch (syscall_num) {
@@ -246,6 +252,8 @@ static inline void handle_ecall(uint32_t inst, CPU_t *cpu) {
   cpu->pc += 4;
 }
 static inline void handle_ebreak(uint32_t inst, CPU_t *cpu) {
+  (void)inst;
+
   fprintf(stderr, "EBREAK executed at PC: 0x%08x\n", cpu->pc);
   cpu->halt = true;
 }
