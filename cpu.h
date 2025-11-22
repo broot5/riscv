@@ -50,10 +50,10 @@ static inline uint32_t read_reg(CPU_t *cpu, unsigned int idx) {
     cpu->exit_code = 1;
     cpu->halt = true;
     return 0;
-  } else if (idx == 0)
+  }
+  if (idx == 0)
     return 0;
-  else
-    return cpu->regs[idx];
+  return cpu->regs[idx];
 }
 
 static inline void write_reg(CPU_t *cpu, unsigned int idx, uint32_t value) {
@@ -62,10 +62,10 @@ static inline void write_reg(CPU_t *cpu, unsigned int idx, uint32_t value) {
     cpu->exit_code = 1;
     cpu->halt = true;
     return;
-  } else if (idx != 0)
-    cpu->regs[idx] = value;
-
-  return;
+  }
+  if (idx == 0)
+    return;
+  cpu->regs[idx] = value;
 }
 
 static inline bool validate_mem_access(CPU_t *cpu, uint32_t addr, size_t size) {
@@ -140,6 +140,20 @@ static inline void write_word(CPU_t *cpu, uint32_t addr, uint32_t value) {
 
 static inline uint32_t fetch_instruction(CPU_t *cpu) {
   return read_word(cpu, cpu->pc);
+}
+
+static inline void dump_registers(CPU_t *cpu) {
+  fprintf(stderr,
+          "================================================================\n");
+  fprintf(stderr, "Register Dump:\n");
+  fprintf(stderr, "PC : 0x%08x\n", cpu->pc);
+  for (int i = 0; i < 32; i++) {
+    fprintf(stderr, "x%-2d: 0x%08x ", i, cpu->regs[i]);
+    if ((i + 1) % 4 == 0)
+      fprintf(stderr, "\n");
+  }
+  fprintf(stderr,
+          "================================================================\n");
 }
 
 #endif

@@ -103,6 +103,10 @@ int main(int argc, char *argv[]) {
         instruction, &cpu);
   }
 
+  if (cpu.exit_code != 0) {
+    dump_registers(&cpu);
+  }
+
   free_cpu(&cpu);
 
   return cpu.exit_code;
