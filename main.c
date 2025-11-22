@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <unistd.h>
 
 #include "cpu.h"
 #include "instruction.h"
@@ -7,7 +8,8 @@
 void load_program(CPU_t *cpu, const char *filename) {
   FILE *fp = fopen(filename, "rb");
   if (!fp) {
-    perror("Failed to open program file");
+    perror("Error: Failed to open program file");
+    cpu->exit_code = 1;
     cpu->halt = true;
     return;
   }
@@ -17,7 +19,8 @@ void load_program(CPU_t *cpu, const char *filename) {
   rewind(fp);
 
   if (file_size == -1L) {
-    perror("Failed to get program file size");
+    perror("Error: Failed to get program file size");
+    cpu->exit_code = 1;
     cpu->halt = true;
     fclose(fp);
     return;
@@ -26,11 +29,12 @@ void load_program(CPU_t *cpu, const char *filename) {
   size_t load_offset_bytes = PROGRAM_LOAD_VADDR - MEMORY_BASE_ADDR;
 
   if (load_offset_bytes >= cpu->mem_size) {
-    fprintf(
-        stderr,
-        "Program load virtual address (0x%08x) is beyond emulated memory bounds"
-        "(base: 0x%08x, size: %zu bytes)\n",
-        PROGRAM_LOAD_VADDR, MEMORY_BASE_ADDR, cpu->mem_size);
+    fprintf(stderr,
+            "Error: Program load virtual address (0x%08x) is beyond emulated "
+            "memory bounds"
+            "(base: 0x%08x, size: %zu bytes)\n",
+            PROGRAM_LOAD_VADDR, MEMORY_BASE_ADDR, cpu->mem_size);
+    cpu->exit_code = 1;
     cpu->halt = true;
     fclose(fp);
     return;
@@ -38,9 +42,11 @@ void load_program(CPU_t *cpu, const char *filename) {
 
   if ((size_t)file_size > (cpu->mem_size - load_offset_bytes)) {
     fprintf(stderr,
-            "Program size (%ld bytes) exceeds available memory at load address"
+            "Error: Program size (%ld bytes) exceeds available memory at load "
+            "address"
             "(0x%08x, available: %zu bytes)\n",
             file_size, PROGRAM_LOAD_VADDR, (cpu->mem_size - load_offset_bytes));
+    cpu->exit_code = 1;
     cpu->halt = true;
     fclose(fp);
     return;
@@ -50,14 +56,17 @@ void load_program(CPU_t *cpu, const char *filename) {
       fread(&cpu->memory[load_offset_bytes], 1, file_size, fp);
 
   if (ferror(fp)) {
-    perror("Error reading program file during load");
+    perror("Error: Failed to read program file");
+    cpu->exit_code = 1;
     cpu->halt = true;
     fclose(fp);
     return;
   }
 
   if (bytes_read_count != (size_t)file_size) {
-    fprintf(stderr, "Only %zu of %ld bytes read from program file %s\n",
+    fprintf(stderr,
+            "Error: Incomplete read. Only %zu of %ld bytes read from program "
+            "file %s\n",
             bytes_read_count, file_size, filename);
   }
 
@@ -68,14 +77,19 @@ void load_program(CPU_t *cpu, const char *filename) {
   return;
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+  if (argc < 2) {
+    fprintf(stderr, "Usage: %s <program.bin>\n", argv[0]);
+    return EXIT_FAILURE;
+  }
+
   CPU_t cpu;
   init_cpu(&cpu);
 
   InstructionHandler dispatch_table[128][8];
   init_dispatch_table(dispatch_table);
 
-  load_program(&cpu, "test/test.bin");
+  load_program(&cpu, argv[1]);
 
   if (cpu.halt) {
     free_cpu(&cpu);
@@ -87,17 +101,9 @@ int main() {
 
     dispatch_table[get_opcode(instruction)][get_funct3(instruction)](
         instruction, &cpu);
-
-    printf("instruction: 0x%08x\n", instruction);
-    printf("pc: 0x%08x\n", cpu.pc);
-    printf("regs:");
-    for (int i = 0; i < 32; i++) {
-      printf(" %d", read_reg(&cpu, i));
-    }
-    printf("\n\n");
   }
 
   free_cpu(&cpu);
 
-  return cpu.halt ? EXIT_FAILURE : EXIT_SUCCESS;
+  return cpu.exit_code;
 }

@@ -2,6 +2,7 @@
 #define HANDLER_H
 
 #include <stdint.h>
+#include <unistd.h>
 
 #include "cpu.h"
 #include "utils.h"
@@ -209,12 +210,50 @@ static inline void handle_and(uint32_t inst, CPU_t *cpu) {
 }
 
 static inline void handle_fence(uint32_t inst, CPU_t *cpu) { cpu->pc += 4; }
-static inline void handle_ecall(uint32_t inst, CPU_t *cpu) { cpu->halt = true; }
+
+static inline void handle_ecall(uint32_t inst, CPU_t *cpu) {
+  uint32_t syscall_num = read_reg(cpu, 17); // a7
+
+  switch (syscall_num) {
+  case 64: // SYS_write
+  {
+    uint32_t fd = read_reg(cpu, 10);       // a0
+    uint32_t buf_addr = read_reg(cpu, 11); // a1
+    uint32_t count = read_reg(cpu, 12);    // a2
+
+    if ((buf_addr + count) > (MEMORY_BASE_ADDR + cpu->mem_size)) {
+      fprintf(stderr, "Error: ECALL write buffer out of bounds\n");
+      cpu->exit_code = 1;
+      cpu->halt = true;
+      return;
+    }
+
+    char *ptr = (char *)&cpu->memory[buf_addr - MEMORY_BASE_ADDR];
+    ssize_t written = write(fd, ptr, count);
+    write_reg(cpu, 10, (uint32_t)written);
+    break;
+  }
+  case 93:                              // SYS_exit
+    cpu->exit_code = read_reg(cpu, 10); // a0
+    cpu->halt = true;
+    return;
+  default:
+    fprintf(stderr, "Error: Unknown syscall: %d\n", syscall_num);
+    cpu->exit_code = 1;
+    cpu->halt = true;
+    return;
+  }
+  cpu->pc += 4;
+}
 static inline void handle_ebreak(uint32_t inst, CPU_t *cpu) {
+  fprintf(stderr, "EBREAK executed at PC: 0x%08x\n", cpu->pc);
   cpu->halt = true;
 }
 
 static inline void handle_illegal_instruction(uint32_t inst, CPU_t *cpu) {
+  fprintf(stderr, "Error: Illegal instruction at PC: 0x%08x, Inst: 0x%08x\n",
+          cpu->pc, inst);
+  cpu->exit_code = 1;
   cpu->halt = true;
 }
 
