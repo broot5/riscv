@@ -117,9 +117,8 @@ static inline void handle_ecall_ebreak(uint32_t inst, CPU_t *cpu) {
   }
 }
 
-extern InstructionHandler dispatch_table[128][8];
-
-static inline void init_dispatch_table() {
+static inline void
+init_dispatch_table(InstructionHandler dispatch_table[128][8]) {
   for (int i = 0; i < 128; i++) {
     for (int j = 0; j < 8; j++) {
       dispatch_table[i][j] = handle_illegal_instruction;

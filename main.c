@@ -71,12 +71,9 @@ void load_program(CPU_t *cpu, const char *filename) {
 int main() {
   CPU_t cpu;
   init_cpu(&cpu);
-  init_dispatch_table();
 
-  if (cpu.halt) {
-    free_cpu(&cpu);
-    return EXIT_FAILURE;
-  }
+  InstructionHandler dispatch_table[128][8];
+  init_dispatch_table(dispatch_table);
 
   load_program(&cpu, "test/test.bin");
 
