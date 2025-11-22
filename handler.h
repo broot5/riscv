@@ -19,6 +19,7 @@ static inline void handle_auipc(uint32_t inst, CPU_t *cpu) {
 }
 
 static inline void handle_jal(uint32_t inst, CPU_t *cpu) {
+  write_reg(cpu, get_rd(inst), cpu->pc + 4);
   cpu->pc += get_imm_j(inst);
 }
 static inline void handle_jalr(uint32_t inst, CPU_t *cpu) {
