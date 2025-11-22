@@ -221,6 +221,24 @@ static inline void handle_ecall(uint32_t inst, CPU_t *cpu) {
   uint32_t syscall_num = read_reg(cpu, 17); // a7
 
   switch (syscall_num) {
+  case 63: // SYS_read
+  {
+    uint32_t fd = read_reg(cpu, 10);       // a0
+    uint32_t buf_addr = read_reg(cpu, 11); // a1
+    uint32_t count = read_reg(cpu, 12);    // a2
+
+    if ((buf_addr + count) > (MEMORY_BASE_ADDR + cpu->mem_size)) {
+      fprintf(stderr, "Error: ECALL read buffer out of bounds\n");
+      cpu->exit_code = 1;
+      cpu->halt = true;
+      return;
+    }
+
+    char *ptr = (char *)&cpu->memory[buf_addr - MEMORY_BASE_ADDR];
+    ssize_t read_count = read(fd, ptr, count);
+    write_reg(cpu, 10, (uint32_t)read_count);
+    break;
+  }
   case 64: // SYS_write
   {
     uint32_t fd = read_reg(cpu, 10);       // a0
