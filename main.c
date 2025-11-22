@@ -2,6 +2,7 @@
 
 #include "cpu.h"
 #include "instruction.h"
+#include "utils.h"
 
 void load_program(CPU_t *cpu, const char *filename) {
   FILE *fp = fopen(filename, "rb");
@@ -34,6 +35,7 @@ void load_program(CPU_t *cpu, const char *filename) {
     fclose(fp);
     return;
   }
+
   if ((size_t)file_size > (cpu->mem_size - load_offset_bytes)) {
     fprintf(stderr,
             "Program size (%ld bytes) exceeds available memory at load address"
@@ -69,6 +71,7 @@ void load_program(CPU_t *cpu, const char *filename) {
 int main() {
   CPU_t cpu;
   init_cpu(&cpu);
+  init_dispatch_table();
 
   if (cpu.halt) {
     free_cpu(&cpu);
@@ -85,12 +88,8 @@ int main() {
   while (!cpu.halt) {
     uint32_t instruction = fetch_instruction(&cpu);
 
-    if (cpu.halt)
-      break;
-
-    decoded_instruction_t decoded_inst = decode_instruction(instruction);
-
-    execute_instruction(&decoded_inst, &cpu);
+    dispatch_table[get_opcode(instruction)][get_funct3(instruction)](
+        instruction, &cpu);
 
     printf("instruction: 0x%08x\n", instruction);
     printf("pc: 0x%08x\n", cpu.pc);
