@@ -1,9 +1,9 @@
 CC = clang
 CFLAGS = -Wall -Wextra -g -O2
 TARGET = riscv
-SRCS = main.c
+SRCS = main.c loader.c
 OBJS = $(SRCS:.c=.o)
-HEADERS = cpu.h handler.h instruction.h utils.h code_defines.h
+HEADERS = cpu.h handler.h instruction.h utils.h code_defines.h syscall.h loader.h
 
 all: $(TARGET)
 
