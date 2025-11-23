@@ -3,7 +3,7 @@
 #include <unistd.h>
 
 #include "cpu.h"
-#include "instruction.h"
+#include "decoder.h"
 #include "loader.h"
 #include "utils.h"
 

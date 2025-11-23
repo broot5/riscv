@@ -1,5 +1,5 @@
-#ifndef HANDLER_H
-#define HANDLER_H
+#ifndef INSTRUCTIONS_H
+#define INSTRUCTIONS_H
 
 #include <stdint.h>
 #include <unistd.h>

@@ -1,5 +1,5 @@
-#ifndef CODE_DEFINES_H
-#define CODE_DEFINES_H
+#ifndef OPCODES_H
+#define OPCODES_H
 
 #define OPCODE_LUI 0b0110111
 #define OPCODE_AUIPC 0b0010111

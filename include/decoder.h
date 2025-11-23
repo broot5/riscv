@@ -1,11 +1,11 @@
-#ifndef INSTRUCTION_H
-#define INSTRUCTION_H
+#ifndef DECODER_H
+#define DECODER_H
 
 #include <stdint.h>
 
-#include "code_defines.h"
 #include "cpu.h"
-#include "handler.h"
+#include "instructions.h"
+#include "opcodes.h"
 #include "utils.h"
 
 static inline void handle_op_imm_001(uint32_t inst, CPU_t *cpu) {
