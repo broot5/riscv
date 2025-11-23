@@ -1,11 +1,40 @@
 #include <stdbool.h>
+#include <stdio.h>
 #include <unistd.h>
 
 #include "cpu.h"
 #include "instruction.h"
 #include "utils.h"
 
-void load_program(CPU_t *cpu, const char *filename) {
+typedef struct Elf32_Ehdr {
+  unsigned char e_ident[16];
+  uint16_t e_type;
+  uint16_t e_machine;
+  uint32_t e_version;
+  uint32_t e_entry;
+  uint32_t e_phoff;
+  uint32_t e_shoff;
+  uint32_t e_flags;
+  uint16_t e_ehsize;
+  uint16_t e_phentsize;
+  uint16_t e_phnum;
+  uint16_t e_shentsize;
+  uint16_t e_shnum;
+  uint16_t e_shstrndx;
+} Elf32_Ehdr_t;
+
+typedef struct Elf32_Phdr {
+  uint32_t p_type;
+  uint32_t p_offset;
+  uint32_t p_vaddr;
+  uint32_t p_paddr;
+  uint32_t p_filesz;
+  uint32_t p_memsz;
+  uint32_t p_flags;
+  uint32_t p_align;
+} Elf32_Phdr_t;
+
+void load_elf(CPU_t *cpu, const char *filename) {
   FILE *fp = fopen(filename, "rb");
   if (!fp) {
     perror("Error: Failed to open program file");
@@ -14,72 +43,172 @@ void load_program(CPU_t *cpu, const char *filename) {
     return;
   }
 
-  fseek(fp, 0, SEEK_END);
-  long file_size = ftell(fp);
-  rewind(fp);
-
-  if (file_size == -1L) {
-    perror("Error: Failed to get program file size");
+  Elf32_Ehdr_t elf_header;
+  if (fread(&elf_header, sizeof(Elf32_Ehdr_t), 1, fp) != 1) {
+    fprintf(stderr, "Error: Failed to read ELF header\n");
+    fclose(fp);
     cpu->exit_code = 1;
     cpu->halt = true;
-    fclose(fp);
     return;
   }
 
-  size_t load_offset_bytes = PROGRAM_LOAD_VADDR - MEMORY_BASE_ADDR;
-
-  if (load_offset_bytes >= cpu->mem_size) {
-    fprintf(stderr,
-            "Error: Program load virtual address (0x%08x) is beyond emulated "
-            "memory bounds"
-            "(base: 0x%08x, size: %zu bytes)\n",
-            PROGRAM_LOAD_VADDR, MEMORY_BASE_ADDR, cpu->mem_size);
+  // Validate ELF Magic Number
+  if (elf_header.e_ident[0] != 0x7F || elf_header.e_ident[1] != 'E' ||
+      elf_header.e_ident[2] != 'L' || elf_header.e_ident[3] != 'F') {
+    fprintf(stderr, "Error: Not a valid ELF file\n");
+    fclose(fp);
     cpu->exit_code = 1;
     cpu->halt = true;
-    fclose(fp);
     return;
   }
 
-  if ((size_t)file_size > (cpu->mem_size - load_offset_bytes)) {
-    fprintf(stderr,
-            "Error: Program size (%ld bytes) exceeds available memory at load "
-            "address"
-            "(0x%08x, available: %zu bytes)\n",
-            file_size, PROGRAM_LOAD_VADDR, (cpu->mem_size - load_offset_bytes));
+  // Validate Class (1 = 32-bit)
+  if (elf_header.e_ident[4] != 1) {
+    fprintf(stderr, "Error: Not a 32-bit ELF file\n");
+    fclose(fp);
     cpu->exit_code = 1;
     cpu->halt = true;
-    fclose(fp);
     return;
   }
 
-  size_t bytes_read_count =
-      fread(&cpu->memory[load_offset_bytes], 1, file_size, fp);
-
-  if (ferror(fp)) {
-    perror("Error: Failed to read program file");
+  // Validate Executable File
+  if (elf_header.e_type != 2) {
+    fprintf(stderr, "Error: Not an executable ELF file (e_type=%d)\n",
+            elf_header.e_type);
+    fclose(fp);
     cpu->exit_code = 1;
     cpu->halt = true;
-    fclose(fp);
     return;
   }
 
-  if (bytes_read_count != (size_t)file_size) {
-    fprintf(stderr,
-            "Error: Incomplete read. Only %zu of %ld bytes read from program "
-            "file %s\n",
-            bytes_read_count, file_size, filename);
+  // Validate Machine Architecture (RISC-V)
+  if (elf_header.e_machine != 243) {
+    fprintf(stderr, "Error: Not a RISC-V ELF file (e_machine=%d)\n",
+            elf_header.e_machine);
+    fclose(fp);
+    cpu->exit_code = 1;
+    cpu->halt = true;
+    return;
   }
 
+  if (elf_header.e_version != 1) {
+    fprintf(stderr, "Error: Invalid ELF version (e_version=%d)\n",
+            elf_header.e_version);
+    fclose(fp);
+    cpu->exit_code = 1;
+    cpu->halt = true;
+    return;
+  }
+
+  Elf32_Phdr_t *program_headers =
+      (Elf32_Phdr_t *)malloc(sizeof(Elf32_Phdr_t) * elf_header.e_phnum);
+  if (!program_headers) {
+    perror("Error: Failed to allocate memory for program headers");
+    fclose(fp);
+    cpu->exit_code = 1;
+    cpu->halt = true;
+    return;
+  }
+
+  // Read all program headers
+  for (int i = 0; i < elf_header.e_phnum; i++) {
+    if (fseek(fp, elf_header.e_phoff + i * elf_header.e_phentsize, SEEK_SET) !=
+        0) {
+      perror("Error: Failed to seek to program header");
+      free(program_headers);
+      fclose(fp);
+      cpu->exit_code = 1;
+      cpu->halt = true;
+      return;
+    }
+
+    if (fread(&program_headers[i], sizeof(Elf32_Phdr_t), 1, fp) != 1) {
+      fprintf(stderr, "Error: Failed to read program header %d\n", i);
+      free(program_headers);
+      fclose(fp);
+      cpu->exit_code = 1;
+      cpu->halt = true;
+      return;
+    }
+  }
+
+  // Find the lowest virtual address (Base Address)
+  uint32_t min_vaddr = 0xFFFFFFFF;
+  bool found_loadable = false;
+
+  for (int i = 0; i < elf_header.e_phnum; i++) {
+    if (program_headers[i].p_type == 1) { // PT_LOAD
+      if (program_headers[i].p_vaddr < min_vaddr) {
+        min_vaddr = program_headers[i].p_vaddr;
+        found_loadable = true;
+      }
+    }
+  }
+
+  if (found_loadable) {
+    cpu->memory_base = min_vaddr;
+    // Update Stack Pointer (x2) to be at the top of the new memory range
+    cpu->regs[2] = cpu->memory_base + cpu->mem_size;
+  }
+
+  // Load segments
+  for (int i = 0; i < elf_header.e_phnum; i++) {
+    Elf32_Phdr_t *ph = &program_headers[i];
+
+    // Handle PT_LOAD Segment
+    if (ph->p_type == 1) {
+      if (ph->p_vaddr < cpu->memory_base ||
+          ph->p_vaddr - cpu->memory_base + ph->p_memsz > cpu->mem_size) {
+        fprintf(stderr,
+                "Error: Segment load address out of bounds (0x%08x + %u, base: "
+                "0x%08x)\n",
+                ph->p_vaddr, ph->p_memsz, cpu->memory_base);
+        free(program_headers);
+        fclose(fp);
+        cpu->exit_code = 1;
+        cpu->halt = true;
+        return;
+      }
+
+      uint8_t *dest = &cpu->memory[ph->p_vaddr - cpu->memory_base];
+
+      if (fseek(fp, ph->p_offset, SEEK_SET) != 0) {
+        perror("Error: Failed to seek to segment data");
+        free(program_headers);
+        fclose(fp);
+        cpu->exit_code = 1;
+        cpu->halt = true;
+        return;
+      }
+
+      if (ph->p_filesz > 0) {
+        if (fread(dest, 1, ph->p_filesz, fp) != ph->p_filesz) {
+          fprintf(stderr, "Error: Failed to read segment data for segment %d\n",
+                  i);
+          free(program_headers);
+          fclose(fp);
+          cpu->exit_code = 1;
+          cpu->halt = true;
+          return;
+        }
+      }
+
+      if (ph->p_memsz > ph->p_filesz) {
+        size_t bss_size = ph->p_memsz - ph->p_filesz;
+        memset(dest + ph->p_filesz, 0, bss_size);
+      }
+    }
+  }
+
+  free(program_headers);
   fclose(fp);
 
-  printf("Loaded %zu bytes from %s into emulated memory\n", bytes_read_count,
-         filename);
-  return;
+  cpu->pc = elf_header.e_entry;
 }
 
 int main(int argc, char *argv[]) {
   if (argc < 2) {
-    fprintf(stderr, "Usage: %s <program.bin>\n", argv[0]);
+    fprintf(stderr, "Usage: %s <program.elf>\n", argv[0]);
     return EXIT_FAILURE;
   }
 
@@ -89,7 +218,7 @@ int main(int argc, char *argv[]) {
   InstructionHandler dispatch_table[128][8];
   init_dispatch_table(dispatch_table);
 
-  load_program(&cpu, argv[1]);
+  load_elf(&cpu, argv[1]);
 
   if (cpu.halt) {
     free_cpu(&cpu);
