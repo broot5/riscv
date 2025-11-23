@@ -28,9 +28,17 @@ int main(int argc, char *argv[]) {
 
   while (!cpu.halt) {
     uint32_t instruction = fetch_instruction(&cpu);
+    int step = 4;
+
+    cpu.next_pc = cpu.pc + step;
 
     dispatch_table[get_opcode(instruction)][get_funct3(instruction)](
         instruction, &cpu);
+
+    if (cpu.halt)
+      break;
+
+    cpu.pc = cpu.next_pc;
   }
 
   if (cpu.exit_code != 0) {

@@ -12,6 +12,7 @@
 typedef struct CPU {
   uint32_t regs[32];
   uint32_t pc;
+  uint32_t next_pc;
   uint8_t *memory;
   size_t mem_size;
   uint32_t memory_base;
