@@ -1,6 +1,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <stdbool.h>
 #include <stdint.h>
 
 static inline uint8_t get_opcode(uint32_t inst) {
@@ -63,6 +64,47 @@ static inline int32_t get_imm_j(uint32_t inst) {
   uint32_t imm_raw =
       (imm_20 << 20) | (imm_19_12 << 12) | (imm_11 << 11) | (imm_10_1 << 1);
   return sign_extend(imm_raw, 21);
+}
+
+static inline uint32_t build_r_type(uint32_t opcode, uint32_t rd,
+                                    uint32_t funct3, uint32_t rs1, uint32_t rs2,
+                                    uint32_t funct7) {
+  return opcode | (rd << 7) | (funct3 << 12) | (rs1 << 15) | (rs2 << 20) |
+         (funct7 << 25);
+}
+
+static inline uint32_t build_i_type(uint32_t opcode, uint32_t rd,
+                                    uint32_t funct3, uint32_t rs1,
+                                    int32_t imm) {
+  return opcode | (rd << 7) | (funct3 << 12) | (rs1 << 15) |
+         ((imm & 0xFFF) << 20);
+}
+
+static inline uint32_t build_s_type(uint32_t opcode, uint32_t funct3,
+                                    uint32_t rs1, uint32_t rs2, int32_t imm) {
+  return opcode | ((imm & 0x1F) << 7) | (funct3 << 12) | (rs1 << 15) |
+         (rs2 << 20) | ((imm >> 5 & 0x7F) << 25);
+}
+
+static inline uint32_t build_b_type(uint32_t opcode, uint32_t funct3,
+                                    uint32_t rs1, uint32_t rs2, int32_t imm) {
+  return opcode | ((imm >> 11 & 0x1) << 7) | ((imm >> 1 & 0xF) << 8) |
+         (funct3 << 12) | (rs1 << 15) | (rs2 << 20) |
+         ((imm >> 5 & 0x3F) << 25) | ((imm >> 12 & 0x1) << 31);
+}
+
+static inline uint32_t build_u_type(uint32_t opcode, uint32_t rd, int32_t imm) {
+  return opcode | (rd << 7) | (imm & 0xFFFFF000);
+}
+
+static inline uint32_t build_j_type(uint32_t opcode, uint32_t rd, int32_t imm) {
+  return opcode | (rd << 7) | ((imm >> 12 & 0xFF) << 12) |
+         ((imm >> 11 & 0x1) << 20) | ((imm >> 1 & 0x3FF) << 21) |
+         ((imm >> 20 & 0x1) << 31);
+}
+
+static inline bool is_compressed(uint16_t half) {
+  return (half & 0b11) != 0b11;
 }
 
 #endif

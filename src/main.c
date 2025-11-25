@@ -1,7 +1,9 @@
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
 
+#include "compressed_decoder.h"
 #include "cpu.h"
 #include "decoder.h"
 #include "loader.h"
@@ -27,13 +29,19 @@ int main(int argc, char *argv[]) {
   }
 
   while (!cpu.halt) {
-    uint32_t instruction = fetch_instruction(&cpu);
-    int step = 4;
+    FetchResult_t fetch = fetch_instruction(&cpu);
+    uint32_t inst = fetch.inst;
+    int step = fetch.len;
+
+    cpu.current_inst_len = fetch.len;
+
+    if (step == 2) {
+      inst = expand_compressed((uint16_t)inst);
+    }
 
     cpu.next_pc = cpu.pc + step;
 
-    dispatch_table[get_opcode(instruction)][get_funct3(instruction)](
-        instruction, &cpu);
+    dispatch_table[get_opcode(inst)][get_funct3(inst)](inst, &cpu);
 
     if (cpu.halt)
       break;

@@ -165,6 +165,8 @@ static inline void handle_system_000(uint32_t inst, CPU_t *cpu) {
   }
 }
 
+typedef void (*InstructionHandler)(uint32_t, CPU_t *);
+
 static inline void
 init_dispatch_table(InstructionHandler dispatch_table[128][8]) {
   for (int i = 0; i < 128; i++) {

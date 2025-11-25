@@ -7,12 +7,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "utils.h"
+
 #define MEMORY_SIZE_BYTES 16 * 1024 * 1024 // 16MB
 
 typedef struct CPU {
   uint32_t regs[32];
   uint32_t pc;
   uint32_t next_pc;
+  uint32_t current_inst_len;
   uint8_t *memory;
   size_t mem_size;
   uint32_t memory_base;
@@ -20,9 +23,16 @@ typedef struct CPU {
   bool halt;
 } CPU_t;
 
+typedef struct FetchResult {
+  uint32_t inst;
+  int len;
+} FetchResult_t;
+
 static inline void init_cpu(CPU_t *cpu) {
   memset(cpu->regs, 0, sizeof(cpu->regs));
   cpu->pc = 0;
+  cpu->next_pc = 0;
+  cpu->current_inst_len = 0;
   cpu->exit_code = 0;
   cpu->halt = false;
 
@@ -141,8 +151,14 @@ static inline void write_word(CPU_t *cpu, uint32_t addr, uint32_t value) {
   memcpy(&cpu->memory[addr - cpu->memory_base], &value, 4);
 }
 
-static inline uint32_t fetch_instruction(CPU_t *cpu) {
-  return read_word(cpu, cpu->pc);
+static inline FetchResult_t fetch_instruction(CPU_t *cpu) {
+  uint16_t lower = read_half(cpu, cpu->pc);
+
+  if (!is_compressed(lower)) {
+    uint16_t upper = read_half(cpu, cpu->pc + 2);
+    return (FetchResult_t){lower | (upper << 16), 4};
+  }
+  return (FetchResult_t){lower, 2};
 }
 
 static inline void dump_registers(CPU_t *cpu) {

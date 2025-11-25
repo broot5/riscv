@@ -8,8 +8,6 @@
 #include "syscall.h"
 #include "utils.h"
 
-typedef void (*InstructionHandler)(uint32_t, CPU_t *);
-
 static inline void handle_lui(uint32_t inst, CPU_t *cpu) {
   uint32_t imm = get_imm_u(inst);
 
@@ -23,11 +21,11 @@ static inline void handle_auipc(uint32_t inst, CPU_t *cpu) {
 }
 
 static inline void handle_jal(uint32_t inst, CPU_t *cpu) {
-  write_reg(cpu, get_rd(inst), cpu->pc + 4);
+  write_reg(cpu, get_rd(inst), cpu->pc + cpu->current_inst_len);
   cpu->next_pc = cpu->pc + get_imm_j(inst);
 }
 static inline void handle_jalr(uint32_t inst, CPU_t *cpu) {
-  uint32_t next_pc = cpu->pc + 4;
+  uint32_t next_pc = cpu->pc + cpu->current_inst_len;
   uint32_t rs1_val = read_reg(cpu, get_rs1(inst));
   int32_t imm = get_imm_i(inst);
 
