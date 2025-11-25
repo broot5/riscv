@@ -266,6 +266,9 @@ static inline void handle_ecall(uint32_t inst, CPU_t *cpu) {
   case 93: // SYS_exit
     handle_sys_exit(cpu);
     break;
+  case 214: // SYS_brk
+    handle_sys_brk(cpu);
+    break;
   default:
     fprintf(stderr, "Error: Unknown syscall: %d\n", syscall_num);
     cpu->exit_code = 1;

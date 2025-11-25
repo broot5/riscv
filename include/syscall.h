@@ -50,4 +50,28 @@ static inline void handle_sys_exit(CPU_t *cpu) {
   cpu->halt = true;
 }
 
+static inline void handle_sys_brk(CPU_t *cpu) {
+  uint32_t new_brk = read_reg(cpu, 10); // a0
+
+  if (new_brk == 0) {
+    write_reg(cpu, 10, cpu->program_break);
+    return;
+  }
+
+  if (new_brk < cpu->memory_base ||
+      new_brk - cpu->memory_base > cpu->mem_size) {
+    write_reg(cpu, 10, cpu->program_break);
+    return;
+  }
+
+  uint32_t sp = read_reg(cpu, 2);
+  if (new_brk >= sp - 4096) {
+    write_reg(cpu, 10, cpu->program_break);
+    return;
+  }
+
+  cpu->program_break = new_brk;
+  write_reg(cpu, 10, new_brk);
+}
+
 #endif

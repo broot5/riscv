@@ -19,6 +19,7 @@ typedef struct CPU {
   uint8_t *memory;
   size_t mem_size;
   uint32_t memory_base;
+  uint32_t program_break;
   int exit_code;
   bool halt;
 } CPU_t;

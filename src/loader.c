@@ -103,24 +103,39 @@ void load_elf(CPU_t *cpu, const char *filename) {
     }
   }
 
-  // Find the lowest virtual address (Base Address)
-  uint32_t min_vaddr = 0xFFFFFFFF;
+  uint32_t min_vaddr = 0xFFFFFFFF; // lowest virtual address (Base Address)
+  uint32_t max_vaddr = 0;          // highest virtual address (Program Break)
   bool found_loadable = false;
 
   for (int i = 0; i < elf_header.e_phnum; i++) {
     if (program_headers[i].p_type == 1) { // PT_LOAD
+      found_loadable = true;
+
       if (program_headers[i].p_vaddr < min_vaddr) {
         min_vaddr = program_headers[i].p_vaddr;
-        found_loadable = true;
+      }
+
+      uint32_t end_vaddr =
+          program_headers[i].p_vaddr + program_headers[i].p_memsz;
+      if (end_vaddr > max_vaddr) {
+        max_vaddr = end_vaddr;
       }
     }
   }
 
-  if (found_loadable) {
-    cpu->memory_base = min_vaddr;
-    // Update Stack Pointer (x2) to be at the top of the new memory range
-    cpu->regs[2] = cpu->memory_base + cpu->mem_size;
+  if (!found_loadable) {
+    fprintf(stderr, "Error: No loadable segments found in ELF file\n");
+    free(program_headers);
+    fclose(fp);
+    cpu->exit_code = 1;
+    cpu->halt = true;
+    return;
   }
+
+  cpu->memory_base = min_vaddr;
+  cpu->program_break = max_vaddr;
+  // Update Stack Pointer (x2) to be at the top of the new memory range
+  cpu->regs[2] = cpu->memory_base + cpu->mem_size;
 
   // Load segments
   for (int i = 0; i < elf_header.e_phnum; i++) {
