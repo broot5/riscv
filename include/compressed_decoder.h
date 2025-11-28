@@ -42,18 +42,18 @@ static inline int32_t get_imm_ci(uint16_t c_inst) {
 }
 
 static inline int32_t get_imm_cj(uint16_t c_inst) {
-  uint32_t imm = ((c_inst >> 3) & 0x7) | ((c_inst >> 11) & 0x1) << 3 |
-                 ((c_inst >> 2) & 0x1) << 4 | ((c_inst >> 7) & 0x1) << 5 |
-                 ((c_inst >> 6) & 0x1) << 6 | ((c_inst >> 9) & 0x3) << 7 |
-                 ((c_inst >> 8) & 0x1) << 9 | ((c_inst >> 12) & 0x1) << 10;
-  return sign_extend(imm, 11);
+  uint32_t imm = ((c_inst >> 3) & 0x7) << 1 | ((c_inst >> 11) & 0x1) << 4 |
+                 ((c_inst >> 2) & 0x1) << 5 | ((c_inst >> 7) & 0x1) << 6 |
+                 ((c_inst >> 6) & 0x1) << 7 | ((c_inst >> 9) & 0x3) << 8 |
+                 ((c_inst >> 8) & 0x1) << 10 | ((c_inst >> 12) & 0x1) << 11;
+  return sign_extend(imm, 12);
 }
 
 static inline int32_t get_imm_cb(uint16_t c_inst) {
-  uint32_t imm = ((c_inst >> 3) & 0x3) | ((c_inst >> 10) & 0x3) << 2 |
-                 ((c_inst >> 2) & 0x1) << 4 | ((c_inst >> 5) & 0x3) << 5 |
-                 ((c_inst >> 12) & 0x1) << 7;
-  return sign_extend(imm, 8);
+  uint32_t imm = ((c_inst >> 3) & 0x3) << 1 | ((c_inst >> 10) & 0x3) << 3 |
+                 ((c_inst >> 2) & 0x1) << 5 | ((c_inst >> 5) & 0x3) << 6 |
+                 ((c_inst >> 12) & 0x1) << 8;
+  return sign_extend(imm, 9);
 }
 
 static inline uint32_t get_imm_cl_cs(uint16_t c_inst) {
@@ -104,7 +104,7 @@ static inline uint32_t expand_ci_addi(uint16_t c_inst) {
 static inline uint32_t expand_cj_jal(uint16_t c_inst) {
   int32_t imm = get_imm_cj(c_inst);
 
-  return build_j_type(OPCODE_JAL, 1, imm << 1);
+  return build_j_type(OPCODE_JAL, 1, imm);
 }
 
 static inline uint32_t expand_ci_li(uint16_t c_inst) {
@@ -173,21 +173,21 @@ static inline uint32_t expand_cb_ca_misc_alu(uint16_t c_inst) {
 static inline uint32_t expand_cj_j(uint16_t c_inst) {
   int32_t imm = get_imm_cj(c_inst);
 
-  return build_j_type(OPCODE_JAL, 0, imm << 1);
+  return build_j_type(OPCODE_JAL, 0, imm);
 }
 
 static inline uint32_t expand_cb_beqz(uint16_t c_inst) {
   uint8_t rs1_prime = get_c_rs1_prime_reg(c_inst);
   int32_t imm = get_imm_cb(c_inst);
 
-  return build_b_type(OPCODE_BRANCH, 0b000, rs1_prime, 0, imm << 1);
+  return build_b_type(OPCODE_BRANCH, 0b000, rs1_prime, 0, imm);
 }
 
 static inline uint32_t expand_cb_bnez(uint16_t c_inst) {
   uint8_t rs1_prime = get_c_rs1_prime_reg(c_inst);
   int32_t imm = get_imm_cb(c_inst);
 
-  return build_b_type(OPCODE_BRANCH, 0b001, rs1_prime, 0, imm << 1);
+  return build_b_type(OPCODE_BRANCH, 0b001, rs1_prime, 0, imm);
 }
 
 // Quadrant 2
