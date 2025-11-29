@@ -33,8 +33,8 @@ void load_elf(CPU_t *cpu, const char *filename) {
     return;
   }
 
-  // Validate Class (1 = 32-bit)
-  if (elf_header.e_ident[4] != 1) {
+  // Validate Class (32-bit)
+  if (elf_header.e_ident[EI_CLASS] != ELFCLASS32) {
     fprintf(stderr, "Error: Not a 32-bit ELF file\n");
     fclose(fp);
     cpu->exit_code = 1;
@@ -43,7 +43,7 @@ void load_elf(CPU_t *cpu, const char *filename) {
   }
 
   // Validate Executable File
-  if (elf_header.e_type != 2) {
+  if (elf_header.e_type != ET_EXEC) {
     fprintf(stderr, "Error: Not an executable ELF file (e_type=%d)\n",
             elf_header.e_type);
     fclose(fp);
@@ -53,7 +53,7 @@ void load_elf(CPU_t *cpu, const char *filename) {
   }
 
   // Validate Machine Architecture (RISC-V)
-  if (elf_header.e_machine != 243) {
+  if (elf_header.e_machine != EM_RISCV) {
     fprintf(stderr, "Error: Not a RISC-V ELF file (e_machine=%d)\n",
             elf_header.e_machine);
     fclose(fp);
@@ -108,7 +108,7 @@ void load_elf(CPU_t *cpu, const char *filename) {
   bool found_loadable = false;
 
   for (int i = 0; i < elf_header.e_phnum; i++) {
-    if (program_headers[i].p_type == 1) { // PT_LOAD
+    if (program_headers[i].p_type == PT_LOAD) {
       found_loadable = true;
 
       if (program_headers[i].p_vaddr < min_vaddr) {
@@ -142,9 +142,10 @@ void load_elf(CPU_t *cpu, const char *filename) {
     Elf32_Phdr_t *ph = &program_headers[i];
 
     // Handle PT_LOAD Segment
-    if (ph->p_type == 1) {
-      if (ph->p_vaddr < cpu->memory_base ||
-          ph->p_vaddr - cpu->memory_base + ph->p_memsz > cpu->mem_size) {
+    if (ph->p_type == PT_LOAD) {
+      uint32_t offset = ph->p_vaddr - cpu->memory_base;
+      if (ph->p_vaddr < cpu->memory_base || offset > cpu->mem_size ||
+          ph->p_memsz > cpu->mem_size - offset) {
         fprintf(stderr,
                 "Error: Segment load address out of bounds (0x%08x + %u, base: "
                 "0x%08x)\n",
@@ -156,7 +157,7 @@ void load_elf(CPU_t *cpu, const char *filename) {
         return;
       }
 
-      uint8_t *dest = &cpu->memory[ph->p_vaddr - cpu->memory_base];
+      uint8_t *dest = &cpu->memory[offset];
 
       if (fseek(fp, ph->p_offset, SEEK_SET) != 0) {
         perror("Error: Failed to seek to segment data");

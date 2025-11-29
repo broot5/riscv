@@ -7,17 +7,30 @@
 
 #include "cpu.h"
 
+// Helper function to validate buffer for syscalls
+static inline bool validate_syscall_buffer(CPU_t *cpu, uint32_t buf_addr,
+                                           uint32_t count, const char *op) {
+  if (buf_addr < cpu->memory_base) {
+    fprintf(stderr, "Error: ECALL %s buffer out of bounds\n", op);
+    return false;
+  }
+
+  uint32_t offset = buf_addr - cpu->memory_base;
+  if (offset >= cpu->mem_size || count > cpu->mem_size - offset) {
+    fprintf(stderr, "Error: ECALL %s buffer out of bounds\n", op);
+    return false;
+  }
+
+  return true;
+}
+
 static inline void handle_sys_read(CPU_t *cpu) {
   uint32_t fd = read_reg(cpu, 10);       // a0
   uint32_t buf_addr = read_reg(cpu, 11); // a1
   uint32_t count = read_reg(cpu, 12);    // a2
 
-  if (buf_addr < cpu->memory_base ||
-      buf_addr - cpu->memory_base >= cpu->mem_size ||
-      count > cpu->mem_size - (buf_addr - cpu->memory_base)) {
-    fprintf(stderr, "Error: ECALL read buffer out of bounds\n");
-    cpu->exit_code = 1;
-    cpu->halt = true;
+  if (!validate_syscall_buffer(cpu, buf_addr, count, "read")) {
+    write_reg(cpu, 10, (uint32_t)-1);
     return;
   }
 
@@ -31,12 +44,8 @@ static inline void handle_sys_write(CPU_t *cpu) {
   uint32_t buf_addr = read_reg(cpu, 11); // a1
   uint32_t count = read_reg(cpu, 12);    // a2
 
-  if (buf_addr < cpu->memory_base ||
-      buf_addr - cpu->memory_base >= cpu->mem_size ||
-      count > cpu->mem_size - (buf_addr - cpu->memory_base)) {
-    fprintf(stderr, "Error: ECALL write buffer out of bounds\n");
-    cpu->exit_code = 1;
-    cpu->halt = true;
+  if (!validate_syscall_buffer(cpu, buf_addr, count, "write")) {
+    write_reg(cpu, 10, (uint32_t)-1);
     return;
   }
 
