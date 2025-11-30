@@ -9,7 +9,7 @@
 
 #include "utils.h"
 
-#define MEMORY_SIZE_BYTES 16 * 1024 * 1024 // 16MB
+#define MEMORY_SIZE_BYTES (16 * 1024 * 1024) // 16MB
 
 typedef struct CPU {
   uint32_t regs[32];
@@ -44,16 +44,14 @@ static inline void init_cpu(CPU_t *cpu) {
   }
   cpu->mem_size = MEMORY_SIZE_BYTES;
   cpu->memory_base = 0;
+  cpu->program_break = 0;
 
   cpu->regs[2] = cpu->memory_base + cpu->mem_size;
-  return;
 }
 
 static inline void free_cpu(CPU_t *cpu) {
   free(cpu->memory);
   cpu->memory = NULL;
-
-  return;
 }
 
 static inline uint32_t read_reg(CPU_t *cpu, unsigned int idx) {
@@ -81,17 +79,20 @@ static inline void write_reg(CPU_t *cpu, unsigned int idx, uint32_t value) {
 }
 
 static inline bool validate_mem_access(CPU_t *cpu, uint32_t addr, size_t size) {
-  if (addr < cpu->memory_base ||
-      addr - cpu->memory_base + size > cpu->mem_size) {
-    fprintf(stderr,
-            "Error: Memory access out of bounds (addr: 0x%08x, base: 0x%08x, "
-            "size: %zu)\n",
-            addr, cpu->memory_base, size);
-    cpu->exit_code = 1;
-    cpu->halt = true;
-    return false;
+  if (addr >= cpu->memory_base) {
+    uint32_t offset = addr - cpu->memory_base;
+    if (offset <= cpu->mem_size && size <= cpu->mem_size - offset) {
+      return true;
+    }
   }
-  return true;
+
+  fprintf(stderr,
+          "Error: Memory access out of bounds (addr: 0x%08x, base: 0x%08x, "
+          "size: %zu)\n",
+          addr, cpu->memory_base, size);
+  cpu->exit_code = 1;
+  cpu->halt = true;
+  return false;
 }
 
 static inline bool validate_alignment(CPU_t *cpu, uint32_t addr, size_t size) {

@@ -5,6 +5,12 @@
 
 #include "cpu.h"
 
+#define EI_CLASS 4
+#define ELFCLASS32 1
+#define ET_EXEC 2
+#define EM_RISCV 243
+#define PT_LOAD 1
+
 typedef struct Elf32_Ehdr {
   unsigned char e_ident[16];
   uint16_t e_type;

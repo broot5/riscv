@@ -1,5 +1,5 @@
 CC = clang
-CFLAGS = -Wall -Wextra -g -O2 -Iinclude
+CFLAGS = -Wall -Wextra -Wshadow -g -O2 -Iinclude
 TARGET = riscv
 SRCS = src/main.c src/loader.c
 OBJS = $(SRCS:.c=.o)
