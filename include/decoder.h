@@ -4,7 +4,8 @@
 #include <stdint.h>
 
 #include "cpu.h"
-#include "instructions.h"
+#include "instructions/instructions.h"
+#include "instructions/instructions_m.h"
 #include "opcodes.h"
 #include "utils.h"
 
