@@ -34,8 +34,6 @@ static inline void init_cpu(CPU_t *cpu) {
   cpu->pc = 0;
   cpu->next_pc = 0;
   cpu->current_inst_len = 0;
-  cpu->exit_code = 0;
-  cpu->halt = false;
 
   cpu->memory = (uint8_t *)calloc(1, MEMORY_SIZE_BYTES);
   if (!cpu->memory) {
@@ -47,6 +45,9 @@ static inline void init_cpu(CPU_t *cpu) {
   cpu->program_break = 0;
 
   cpu->regs[2] = cpu->memory_base + cpu->mem_size;
+
+  cpu->exit_code = 0;
+  cpu->halt = false;
 }
 
 static inline void free_cpu(CPU_t *cpu) {
