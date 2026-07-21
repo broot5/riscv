@@ -5,9 +5,9 @@
 #include <unistd.h>
 
 #include "cpu.h"
-#include "decoder.h"
 #include "emulator.h"
 #include "loader.h"
+#include "memory.h"
 
 int main(int argc, char *argv[]) {
   if (argc < 2) {
@@ -18,18 +18,21 @@ int main(int argc, char *argv[]) {
   CPU_t cpu;
   init_cpu(&cpu);
 
-  InstructionHandler dispatch_table[128][8];
-  init_dispatch_table(dispatch_table);
+  Memory_t memory;
+  if (!init_memory(&memory, MEMORY_SIZE_BYTES))
+    return EXIT_FAILURE;
 
-  load_elf(&cpu, argv[1]);
+  RvContext_t context = {.cpu = &cpu, .memory = &memory};
+
+  load_elf(&cpu, &memory, argv[1]);
 
   if (cpu.halt) {
-    free_cpu(&cpu);
+    free_memory(&memory);
     return EXIT_FAILURE;
   }
 
   while (!cpu.halt) {
-    RvStepResult result = rv_step(&cpu, dispatch_table);
+    RvStepResult result = rv_step(&context);
 
     if (result.status != RV_STEP_EXECUTED) {
       break;
@@ -40,7 +43,7 @@ int main(int argc, char *argv[]) {
     dump_registers(&cpu);
   }
 
-  free_cpu(&cpu);
+  free_memory(&memory);
 
   return cpu.exit_code;
 }

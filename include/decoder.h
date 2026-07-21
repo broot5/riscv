@@ -3,10 +3,8 @@
 
 #include <stdint.h>
 
-#include "cpu.h"
+#include "rv_context.h"
 
-typedef void (*InstructionHandler)(uint32_t, CPU_t *);
-
-void init_dispatch_table(InstructionHandler dispatch_table[128][8]);
+void decode_and_execute(uint32_t inst, RvContext_t *context);
 
 #endif

@@ -1,9 +1,11 @@
 #include "emulator.h"
 
 #include "compressed_decoder.h"
-#include "utils.h"
+#include "decoder.h"
+#include "fetch.h"
 
-RvStepResult rv_step(CPU_t *cpu, InstructionHandler dispatch_table[128][8]) {
+RvStepResult rv_step(RvContext_t *context) {
+  CPU_t *cpu = context->cpu;
   RvStepResult result = {.status = RV_STEP_STOPPED,
                          .pc = cpu->pc,
                          .raw_instruction = 0,
@@ -13,13 +15,16 @@ RvStepResult rv_step(CPU_t *cpu, InstructionHandler dispatch_table[128][8]) {
   if (cpu->halt)
     return result;
 
-  FetchResult_t fetch = fetch_instruction(cpu);
+  FetchResult_t fetch = fetch_instruction(context->memory, cpu->pc);
+
+  if (!fetch.success) {
+    cpu->exit_code = 1;
+    cpu->halt = true;
+    return result;
+  }
 
   result.raw_instruction = fetch.inst;
   result.instruction_length = (uint8_t)fetch.len;
-
-  if (cpu->halt)
-    return result;
 
   uint32_t instruction = fetch.inst;
 
@@ -31,10 +36,7 @@ RvStepResult rv_step(CPU_t *cpu, InstructionHandler dispatch_table[128][8]) {
   cpu->current_inst_len = (uint32_t)fetch.len;
   cpu->next_pc = cpu->pc + (uint32_t)fetch.len;
 
-  uint8_t opcode = get_opcode(instruction);
-  uint8_t funct3 = get_funct3(instruction);
-
-  dispatch_table[opcode][funct3](instruction, cpu);
+  decode_and_execute(instruction, context);
 
   if (cpu->halt)
     return result;

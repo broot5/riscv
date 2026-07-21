@@ -7,6 +7,7 @@
 
 #include "cpu.h"
 #include "loader.h"
+#include "memory.h"
 
 static const uint32_t test_vaddr = 0x00010000;
 
@@ -65,18 +66,23 @@ static bool load_test_elf(const Elf32_Phdr_t *program_header,
 
   CPU_t cpu;
   init_cpu(&cpu);
-  load_elf(&cpu, path);
+  Memory_t memory;
+  if (!init_memory(&memory, MEMORY_SIZE_BYTES)) {
+    unlink(path);
+    return false;
+  }
+  load_elf(&cpu, &memory, path);
 
   bool passed = cpu.halt == expect_failure;
   if (passed && check_contents) {
-    passed = cpu.memory_base == program_header->p_vaddr &&
-             cpu.pc == test_vaddr && cpu.memory[0] == data[0] &&
-             cpu.memory[1] == data[1] && cpu.memory[2] == data[2] &&
-             cpu.memory[3] == data[3] && cpu.memory[4] == 0 &&
-             cpu.memory[5] == 0 && cpu.memory[6] == 0 && cpu.memory[7] == 0;
+    passed = memory.base == program_header->p_vaddr && cpu.pc == test_vaddr &&
+             memory.data[0] == data[0] && memory.data[1] == data[1] &&
+             memory.data[2] == data[2] && memory.data[3] == data[3] &&
+             memory.data[4] == 0 && memory.data[5] == 0 &&
+             memory.data[6] == 0 && memory.data[7] == 0;
   }
 
-  free_cpu(&cpu);
+  free_memory(&memory);
   unlink(path);
   return passed;
 }
@@ -141,8 +147,7 @@ static bool test_segment_outside_file(void) {
 int main(void) {
   bool passed = test_valid_segment() && test_filesz_exceeds_memsz() &&
                 test_virtual_address_overflow() &&
-                test_memory_window_overflow() &&
-                test_segment_outside_file();
+                test_memory_window_overflow() && test_segment_outside_file();
 
   if (!passed) {
     fprintf(stderr, "FAIL  loader_validation\n");

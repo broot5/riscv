@@ -3,15 +3,15 @@
 
 #include <stdint.h>
 
-#include "cpu.h"
+#include "rv_context.h"
 
-void handle_mul(uint32_t inst, CPU_t *cpu);
-void handle_mulh(uint32_t inst, CPU_t *cpu);
-void handle_mulhsu(uint32_t inst, CPU_t *cpu);
-void handle_mulhu(uint32_t inst, CPU_t *cpu);
-void handle_div(uint32_t inst, CPU_t *cpu);
-void handle_divu(uint32_t inst, CPU_t *cpu);
-void handle_rem(uint32_t inst, CPU_t *cpu);
-void handle_remu(uint32_t inst, CPU_t *cpu);
+void handle_mul(uint32_t inst, RvContext_t *context);
+void handle_mulh(uint32_t inst, RvContext_t *context);
+void handle_mulhsu(uint32_t inst, RvContext_t *context);
+void handle_mulhu(uint32_t inst, RvContext_t *context);
+void handle_div(uint32_t inst, RvContext_t *context);
+void handle_divu(uint32_t inst, RvContext_t *context);
+void handle_rem(uint32_t inst, RvContext_t *context);
+void handle_remu(uint32_t inst, RvContext_t *context);
 
 #endif

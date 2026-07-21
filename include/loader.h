@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "cpu.h"
+#include "memory.h"
 
 #define EI_CLASS 4
 #define ELFCLASS32 1
@@ -39,6 +40,6 @@ typedef struct Elf32_Phdr {
   uint32_t p_align;
 } Elf32_Phdr_t;
 
-void load_elf(CPU_t *cpu, const char *filename);
+void load_elf(CPU_t *cpu, Memory_t *memory, const char *filename);
 
 #endif

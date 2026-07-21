@@ -1,8 +1,7 @@
 #ifndef EMULATOR_H
 #define EMULATOR_H
 
-#include "cpu.h"
-#include "decoder.h"
+#include "rv_context.h"
 
 typedef enum { RV_STEP_EXECUTED, RV_STEP_STOPPED } RvStepStatus;
 
@@ -14,6 +13,6 @@ typedef struct {
   uint8_t instruction_length;
 } RvStepResult;
 
-RvStepResult rv_step(CPU_t *cpu, InstructionHandler dispatch_table[128][8]);
+RvStepResult rv_step(RvContext_t *context);
 
 #endif

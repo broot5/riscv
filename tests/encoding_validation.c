@@ -5,6 +5,8 @@
 
 #include "compressed_decoder.h"
 #include "cpu.h"
+#include "fetch.h"
+#include "memory.h"
 #include "opcodes.h"
 #include "utils.h"
 
@@ -24,21 +26,24 @@ static bool test_instruction_builders(void) {
   return i_type == UINT32_C(0xfff10093) && get_imm_i(i_type) == -1 &&
          get_imm_s(s_type) == -16 && get_imm_b(b_type) == -4 &&
          (b_type & UINT32_C(0x80000000)) != 0 &&
-         get_imm_u(u_type) == UINT32_C(0xfffff000) &&
-         get_imm_j(j_type) == -2 &&
+         get_imm_u(u_type) == UINT32_C(0xfffff000) && get_imm_j(j_type) == -2 &&
          (j_type & UINT32_C(0x80000000)) != 0;
 }
 
 static bool test_high_bit_fetch(void) {
   CPU_t cpu;
   init_cpu(&cpu);
-  write_word(&cpu, 0, UINT32_C(0xfff10093));
+  Memory_t memory;
+  if (!init_memory(&memory, MEMORY_SIZE_BYTES))
+    return false;
 
-  FetchResult_t fetch = fetch_instruction(&cpu);
-  bool passed = !cpu.halt && fetch.len == 4 &&
+  bool wrote = write_word(&memory, 0, UINT32_C(0xfff10093));
+
+  FetchResult_t fetch = fetch_instruction(&memory, cpu.pc);
+  bool passed = wrote && fetch.success && fetch.len == 4 &&
                 fetch.inst == UINT32_C(0xfff10093);
 
-  free_cpu(&cpu);
+  free_memory(&memory);
   return passed;
 }
 
@@ -57,8 +62,7 @@ static bool test_negative_compressed_immediates(void) {
 
 int main(void) {
   bool passed = test_sign_extension() && test_instruction_builders() &&
-                test_high_bit_fetch() &&
-                test_negative_compressed_immediates();
+                test_high_bit_fetch() && test_negative_compressed_immediates();
 
   if (!passed) {
     fprintf(stderr, "FAIL  encoding_validation\n");

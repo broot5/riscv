@@ -5,212 +5,237 @@
 #include "opcodes.h"
 #include "utils.h"
 
-static void handle_op_imm_001(uint32_t inst, CPU_t *cpu) {
-  if (get_funct7(inst) == 0b0000000)
-    handle_slli(inst, cpu);
+typedef void (*OpcodeHandler)(uint32_t inst, RvContext_t *context);
+
+static void decode_jalr(uint32_t inst, RvContext_t *context) {
+  if (get_funct3(inst) == 0)
+    handle_jalr(inst, context);
   else
-    handle_illegal_instruction(inst, cpu);
+    handle_illegal_instruction(inst, context);
 }
 
-static void handle_op_imm_101(uint32_t inst, CPU_t *cpu) {
+static void decode_branch(uint32_t inst, RvContext_t *context) {
+  switch (get_funct3(inst)) {
+  case 0b000:
+    handle_beq(inst, context);
+    break;
+  case 0b001:
+    handle_bne(inst, context);
+    break;
+  case 0b100:
+    handle_blt(inst, context);
+    break;
+  case 0b101:
+    handle_bge(inst, context);
+    break;
+  case 0b110:
+    handle_bltu(inst, context);
+    break;
+  case 0b111:
+    handle_bgeu(inst, context);
+    break;
+  default:
+    handle_illegal_instruction(inst, context);
+    break;
+  }
+}
+
+static void decode_load(uint32_t inst, RvContext_t *context) {
+  switch (get_funct3(inst)) {
+  case 0b000:
+    handle_lb(inst, context);
+    break;
+  case 0b001:
+    handle_lh(inst, context);
+    break;
+  case 0b010:
+    handle_lw(inst, context);
+    break;
+  case 0b100:
+    handle_lbu(inst, context);
+    break;
+  case 0b101:
+    handle_lhu(inst, context);
+    break;
+  default:
+    handle_illegal_instruction(inst, context);
+    break;
+  }
+}
+
+static void decode_store(uint32_t inst, RvContext_t *context) {
+  switch (get_funct3(inst)) {
+  case 0b000:
+    handle_sb(inst, context);
+    break;
+  case 0b001:
+    handle_sh(inst, context);
+    break;
+  case 0b010:
+    handle_sw(inst, context);
+    break;
+  default:
+    handle_illegal_instruction(inst, context);
+    break;
+  }
+}
+
+static void decode_op_imm(uint32_t inst, RvContext_t *context) {
+  switch (get_funct3(inst)) {
+  case 0b000:
+    handle_addi(inst, context);
+    break;
+  case 0b001:
+    if (get_funct7(inst) == 0b0000000)
+      handle_slli(inst, context);
+    else
+      handle_illegal_instruction(inst, context);
+    break;
+  case 0b010:
+    handle_slti(inst, context);
+    break;
+  case 0b011:
+    handle_sltiu(inst, context);
+    break;
+  case 0b100:
+    handle_xori(inst, context);
+    break;
+  case 0b101:
+    if (get_funct7(inst) == 0b0000000)
+      handle_srli(inst, context);
+    else if (get_funct7(inst) == 0b0100000)
+      handle_srai(inst, context);
+    else
+      handle_illegal_instruction(inst, context);
+    break;
+  case 0b110:
+    handle_ori(inst, context);
+    break;
+  case 0b111:
+    handle_andi(inst, context);
+    break;
+  }
+}
+
+static void decode_m_extension(uint32_t inst, RvContext_t *context) {
+  switch (get_funct3(inst)) {
+  case 0b000:
+    handle_mul(inst, context);
+    break;
+  case 0b001:
+    handle_mulh(inst, context);
+    break;
+  case 0b010:
+    handle_mulhsu(inst, context);
+    break;
+  case 0b011:
+    handle_mulhu(inst, context);
+    break;
+  case 0b100:
+    handle_div(inst, context);
+    break;
+  case 0b101:
+    handle_divu(inst, context);
+    break;
+  case 0b110:
+    handle_rem(inst, context);
+    break;
+  case 0b111:
+    handle_remu(inst, context);
+    break;
+  }
+}
+
+static void decode_base_op(uint32_t inst, RvContext_t *context) {
+  switch (get_funct3(inst)) {
+  case 0b000:
+    handle_add(inst, context);
+    break;
+  case 0b001:
+    handle_sll(inst, context);
+    break;
+  case 0b010:
+    handle_slt(inst, context);
+    break;
+  case 0b011:
+    handle_sltu(inst, context);
+    break;
+  case 0b100:
+    handle_xor(inst, context);
+    break;
+  case 0b101:
+    handle_srl(inst, context);
+    break;
+  case 0b110:
+    handle_or(inst, context);
+    break;
+  case 0b111:
+    handle_and(inst, context);
+    break;
+  }
+}
+
+static void decode_op(uint32_t inst, RvContext_t *context) {
   switch (get_funct7(inst)) {
   case 0b0000000:
-    handle_srli(inst, cpu);
+    decode_base_op(inst, context);
+    break;
+  case 0b0000001:
+    decode_m_extension(inst, context);
     break;
   case 0b0100000:
-    handle_srai(inst, cpu);
+    if (get_funct3(inst) == 0b000)
+      handle_sub(inst, context);
+    else if (get_funct3(inst) == 0b101)
+      handle_sra(inst, context);
+    else
+      handle_illegal_instruction(inst, context);
     break;
   default:
-    handle_illegal_instruction(inst, cpu);
+    handle_illegal_instruction(inst, context);
     break;
   }
 }
 
-static void handle_op_000(uint32_t inst, CPU_t *cpu) {
-  switch (get_funct7(inst)) {
-  case 0b0000000:
-    handle_add(inst, cpu);
+static void decode_misc_mem(uint32_t inst, RvContext_t *context) {
+  if (get_funct3(inst) == 0b000)
+    handle_fence(inst, context);
+  else
+    handle_illegal_instruction(inst, context);
+}
+
+static void decode_system(uint32_t inst, RvContext_t *context) {
+  if (get_funct3(inst) != 0 || get_rd(inst) != 0 || get_rs1(inst) != 0) {
+    handle_illegal_instruction(inst, context);
+    return;
+  }
+
+  switch (get_imm_i(inst)) {
+  case 0:
+    handle_ecall(inst, context);
     break;
-  case 0b0100000:
-    handle_sub(inst, cpu);
-    break;
-  case 0b0000001:
-    handle_mul(inst, cpu);
+  case 1:
+    handle_ebreak(inst, context);
     break;
   default:
-    handle_illegal_instruction(inst, cpu);
+    handle_illegal_instruction(inst, context);
     break;
   }
 }
 
-static void handle_op_001(uint32_t inst, CPU_t *cpu) {
-  switch (get_funct7(inst)) {
-  case 0b0000000:
-    handle_sll(inst, cpu);
-    break;
-  case 0b0000001:
-    handle_mulh(inst, cpu);
-    break;
-  default:
-    handle_illegal_instruction(inst, cpu);
-    break;
-  }
-}
+static const OpcodeHandler opcode_table[128] = {
+    [OPCODE_LUI] = handle_lui,       [OPCODE_AUIPC] = handle_auipc,
+    [OPCODE_JAL] = handle_jal,       [OPCODE_JALR] = decode_jalr,
+    [OPCODE_BRANCH] = decode_branch, [OPCODE_LOAD] = decode_load,
+    [OPCODE_STORE] = decode_store,   [OPCODE_OP_IMM] = decode_op_imm,
+    [OPCODE_OP] = decode_op,         [OPCODE_MISC_MEM] = decode_misc_mem,
+    [OPCODE_SYSTEM] = decode_system,
+};
 
-static void handle_op_010(uint32_t inst, CPU_t *cpu) {
-  switch (get_funct7(inst)) {
-  case 0b0000000:
-    handle_slt(inst, cpu);
-    break;
-  case 0b0000001:
-    handle_mulhsu(inst, cpu);
-    break;
-  default:
-    handle_illegal_instruction(inst, cpu);
-    break;
-  }
-}
-
-static void handle_op_011(uint32_t inst, CPU_t *cpu) {
-  switch (get_funct7(inst)) {
-  case 0b0000000:
-    handle_sltu(inst, cpu);
-    break;
-  case 0b0000001:
-    handle_mulhu(inst, cpu);
-    break;
-  default:
-    handle_illegal_instruction(inst, cpu);
-    break;
-  }
-}
-
-static void handle_op_100(uint32_t inst, CPU_t *cpu) {
-  switch (get_funct7(inst)) {
-  case 0b0000000:
-    handle_xor(inst, cpu);
-    break;
-  case 0b0000001:
-    handle_div(inst, cpu);
-    break;
-  default:
-    handle_illegal_instruction(inst, cpu);
-    break;
-  }
-}
-
-static void handle_op_101(uint32_t inst, CPU_t *cpu) {
-  switch (get_funct7(inst)) {
-  case 0b0000000:
-    handle_srl(inst, cpu);
-    break;
-  case 0b0100000:
-    handle_sra(inst, cpu);
-    break;
-  case 0b0000001:
-    handle_divu(inst, cpu);
-    break;
-  default:
-    handle_illegal_instruction(inst, cpu);
-    break;
-  }
-}
-
-static void handle_op_110(uint32_t inst, CPU_t *cpu) {
-  switch (get_funct7(inst)) {
-  case 0b0000000:
-    handle_or(inst, cpu);
-    break;
-  case 0b0000001:
-    handle_rem(inst, cpu);
-    break;
-  default:
-    handle_illegal_instruction(inst, cpu);
-    break;
-  }
-}
-
-static void handle_op_111(uint32_t inst, CPU_t *cpu) {
-  switch (get_funct7(inst)) {
-  case 0b0000000:
-    handle_and(inst, cpu);
-    break;
-  case 0b0000001:
-    handle_remu(inst, cpu);
-    break;
-  default:
-    handle_illegal_instruction(inst, cpu);
-    break;
-  }
-}
-
-static void handle_system_000(uint32_t inst, CPU_t *cpu) {
-  if (get_rd(inst) == 0 && get_rs1(inst) == 0) {
-    switch (get_imm_i(inst)) {
-    case 0:
-      handle_ecall(inst, cpu);
-      break;
-    case 1:
-      handle_ebreak(inst, cpu);
-      break;
-    default:
-      handle_illegal_instruction(inst, cpu);
-      break;
-    }
-  } else {
-    handle_illegal_instruction(inst, cpu);
-  }
-}
-
-void init_dispatch_table(InstructionHandler dispatch_table[128][8]) {
-  for (int i = 0; i < 128; i++) {
-    for (int j = 0; j < 8; j++)
-      dispatch_table[i][j] = handle_illegal_instruction;
-  }
-
-  for (int i = 0; i < 8; i++) {
-    dispatch_table[OPCODE_LUI][i] = handle_lui;
-    dispatch_table[OPCODE_AUIPC][i] = handle_auipc;
-    dispatch_table[OPCODE_JAL][i] = handle_jal;
-  }
-
-  dispatch_table[OPCODE_JALR][0] = handle_jalr;
-
-  dispatch_table[OPCODE_BRANCH][0b000] = handle_beq;
-  dispatch_table[OPCODE_BRANCH][0b001] = handle_bne;
-  dispatch_table[OPCODE_BRANCH][0b100] = handle_blt;
-  dispatch_table[OPCODE_BRANCH][0b101] = handle_bge;
-  dispatch_table[OPCODE_BRANCH][0b110] = handle_bltu;
-  dispatch_table[OPCODE_BRANCH][0b111] = handle_bgeu;
-
-  dispatch_table[OPCODE_LOAD][0b000] = handle_lb;
-  dispatch_table[OPCODE_LOAD][0b001] = handle_lh;
-  dispatch_table[OPCODE_LOAD][0b010] = handle_lw;
-  dispatch_table[OPCODE_LOAD][0b100] = handle_lbu;
-  dispatch_table[OPCODE_LOAD][0b101] = handle_lhu;
-
-  dispatch_table[OPCODE_STORE][0b000] = handle_sb;
-  dispatch_table[OPCODE_STORE][0b001] = handle_sh;
-  dispatch_table[OPCODE_STORE][0b010] = handle_sw;
-
-  dispatch_table[OPCODE_OP_IMM][0b000] = handle_addi;
-  dispatch_table[OPCODE_OP_IMM][0b010] = handle_slti;
-  dispatch_table[OPCODE_OP_IMM][0b011] = handle_sltiu;
-  dispatch_table[OPCODE_OP_IMM][0b100] = handle_xori;
-  dispatch_table[OPCODE_OP_IMM][0b110] = handle_ori;
-  dispatch_table[OPCODE_OP_IMM][0b111] = handle_andi;
-  dispatch_table[OPCODE_OP_IMM][0b001] = handle_op_imm_001;
-  dispatch_table[OPCODE_OP_IMM][0b101] = handle_op_imm_101;
-
-  dispatch_table[OPCODE_OP][0b000] = handle_op_000;
-  dispatch_table[OPCODE_OP][0b001] = handle_op_001;
-  dispatch_table[OPCODE_OP][0b010] = handle_op_010;
-  dispatch_table[OPCODE_OP][0b011] = handle_op_011;
-  dispatch_table[OPCODE_OP][0b100] = handle_op_100;
-  dispatch_table[OPCODE_OP][0b101] = handle_op_101;
-  dispatch_table[OPCODE_OP][0b110] = handle_op_110;
-  dispatch_table[OPCODE_OP][0b111] = handle_op_111;
-
-  dispatch_table[OPCODE_MISC_MEM][0b000] = handle_fence;
-  dispatch_table[OPCODE_SYSTEM][0b000] = handle_system_000;
+void decode_and_execute(uint32_t inst, RvContext_t *context) {
+  OpcodeHandler handler = opcode_table[get_opcode(inst)];
+  if (handler)
+    handler(inst, context);
+  else
+    handle_illegal_instruction(inst, context);
 }

@@ -6,7 +6,7 @@
 
 #include "loader.h"
 
-void load_elf(CPU_t *cpu, const char *filename) {
+void load_elf(CPU_t *cpu, Memory_t *memory, const char *filename) {
   FILE *fp = fopen(filename, "rb");
   if (!fp) {
     perror("Error: Failed to open program file");
@@ -123,8 +123,7 @@ void load_elf(CPU_t *cpu, const char *filename) {
   // Read all program headers
   for (int i = 0; i < elf_header.e_phnum; i++) {
     uint64_t program_header_offset =
-        (uint64_t)elf_header.e_phoff +
-        (uint64_t)i * elf_header.e_phentsize;
+        (uint64_t)elf_header.e_phoff + (uint64_t)i * elf_header.e_phentsize;
     if (program_header_offset > LONG_MAX ||
         fseek(fp, (long)program_header_offset, SEEK_SET) != 0) {
       perror("Error: Failed to seek to program header");
@@ -211,12 +210,12 @@ void load_elf(CPU_t *cpu, const char *filename) {
     return;
   }
 
-  if (cpu->mem_size > UINT32_MAX ||
-      min_vaddr > UINT32_MAX - (uint32_t)cpu->mem_size) {
+  if (memory->size > UINT32_MAX ||
+      min_vaddr > UINT32_MAX - (uint32_t)memory->size) {
     fprintf(stderr,
             "Error: Guest memory range overflows 32-bit address space "
             "(base=0x%08x, size=%zu)\n",
-            min_vaddr, cpu->mem_size);
+            min_vaddr, memory->size);
     free(program_headers);
     fclose(fp);
     cpu->exit_code = 1;
@@ -224,10 +223,10 @@ void load_elf(CPU_t *cpu, const char *filename) {
     return;
   }
 
-  cpu->memory_base = min_vaddr;
-  cpu->program_break = max_vaddr;
+  memory->base = min_vaddr;
+  memory->program_break = max_vaddr;
   // Update Stack Pointer (x2) to be at the top of the new memory range
-  cpu->regs[2] = cpu->memory_base + cpu->mem_size;
+  cpu->regs[2] = memory->base + (uint32_t)memory->size;
 
   // Load segments
   for (int i = 0; i < elf_header.e_phnum; i++) {
@@ -235,11 +234,11 @@ void load_elf(CPU_t *cpu, const char *filename) {
 
     // Handle PT_LOAD Segment
     if (ph->p_type == PT_LOAD) {
-      if (ph->p_vaddr < cpu->memory_base) {
+      if (ph->p_vaddr < memory->base) {
         fprintf(stderr,
                 "Error: Segment load address below memory base "
                 "(address=0x%08x, base=0x%08x)\n",
-                ph->p_vaddr, cpu->memory_base);
+                ph->p_vaddr, memory->base);
         free(program_headers);
         fclose(fp);
         cpu->exit_code = 1;
@@ -247,22 +246,18 @@ void load_elf(CPU_t *cpu, const char *filename) {
         return;
       }
 
-      size_t offset = (size_t)(ph->p_vaddr - cpu->memory_base);
-      if (offset > cpu->mem_size ||
-          ph->p_memsz > cpu->mem_size - offset ||
-          ph->p_filesz > cpu->mem_size - offset) {
+      uint8_t *dest;
+      if (!memory_get_pointer(memory, ph->p_vaddr, ph->p_memsz, &dest)) {
         fprintf(stderr,
                 "Error: Segment load range out of bounds "
                 "(address=0x%08x, filesz=%u, memsz=%u, base=0x%08x)\n",
-                ph->p_vaddr, ph->p_filesz, ph->p_memsz, cpu->memory_base);
+                ph->p_vaddr, ph->p_filesz, ph->p_memsz, memory->base);
         free(program_headers);
         fclose(fp);
         cpu->exit_code = 1;
         cpu->halt = true;
         return;
       }
-
-      uint8_t *dest = &cpu->memory[offset];
 
       if (fseek(fp, ph->p_offset, SEEK_SET) != 0) {
         perror("Error: Failed to seek to segment data");
