@@ -3,11 +3,10 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "compressed_decoder.h"
 #include "cpu.h"
 #include "decoder.h"
+#include "emulator.h"
 #include "loader.h"
-#include "utils.h"
 
 int main(int argc, char *argv[]) {
   if (argc < 2) {
@@ -29,24 +28,11 @@ int main(int argc, char *argv[]) {
   }
 
   while (!cpu.halt) {
-    FetchResult_t fetch = fetch_instruction(&cpu);
-    uint32_t inst = fetch.inst;
-    int step = fetch.len;
+    RvStepResult result = rv_step(&cpu, dispatch_table);
 
-    cpu.current_inst_len = fetch.len;
-
-    if (step == 2) {
-      inst = expand_compressed((uint16_t)inst);
-    }
-
-    cpu.next_pc = cpu.pc + step;
-
-    dispatch_table[get_opcode(inst)][get_funct3(inst)](inst, &cpu);
-
-    if (cpu.halt)
+    if (result.status != RV_STEP_EXECUTED) {
       break;
-
-    cpu.pc = cpu.next_pc;
+    }
   }
 
   if (cpu.exit_code != 0) {
