@@ -109,13 +109,13 @@ static uint32_t expand_ci_lui_addi16sp(uint16_t c_inst) {
     imm = sign_extend((uint32_t)imm, 6);
     if (imm == 0)
       return 0;
-    return build_i_type(OPCODE_OP_IMM, 2, 0b000, 2, imm << 4);
+    return build_i_type(OPCODE_OP_IMM, 2, 0b000, 2, imm * 16);
   }
 
   imm = get_imm_ci(c_inst);
   if (imm == 0)
     return 0;
-  return build_u_type(OPCODE_LUI, rd, imm << 12);
+  return build_u_type(OPCODE_LUI, rd, imm * 4096);
 }
 
 static uint32_t expand_cb_ca_misc_alu(uint16_t c_inst) {

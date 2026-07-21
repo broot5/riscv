@@ -27,6 +27,8 @@ RISCV_LDFLAGS := -nostdlib -static -fuse-ld=lld -Wl,-T,tests/link.ld
 TEST_SRCS := $(wildcard tests/*.S)
 TEST_ELFS := $(patsubst tests/%.S,$(TEST_BUILD_DIR)/%.elf,$(TEST_SRCS))
 LOADER_TEST := $(TEST_BUILD_DIR)/loader_validation
+ENCODING_TEST := $(TEST_BUILD_DIR)/encoding_validation
+HOST_TESTS := $(LOADER_TEST) $(ENCODING_TEST)
 
 all: $(TARGET)
 
@@ -42,6 +44,9 @@ $(TEST_BUILD_DIR)/%.elf: tests/%.S tests/include/test_macros.inc tests/link.ld |
 $(LOADER_TEST): tests/loader_validation.c $(HOST_BUILD_DIR)/loader.o $(HOST_BUILD_DIR)/cpu.o $(HOST_BUILD_DIR)/utils.o | $(TEST_BUILD_DIR) check-host-tools
 	$(CC) $(CPPFLAGS) $(filter-out -MMD -MP,$(CFLAGS)) -o $@ $^
 
+$(ENCODING_TEST): tests/encoding_validation.c $(HOST_BUILD_DIR)/compressed_decoder.o $(HOST_BUILD_DIR)/cpu.o $(HOST_BUILD_DIR)/utils.o | $(TEST_BUILD_DIR) check-host-tools
+	$(CC) $(CPPFLAGS) $(filter-out -MMD -MP,$(CFLAGS)) -o $@ $^
+
 $(HOST_BUILD_DIR) $(TEST_BUILD_DIR):
 	mkdir -p $@
 
@@ -51,9 +56,10 @@ check-host-tools:
 check-test-tools: check-host-tools
 	sh scripts/check-tools.sh $(firstword $(RISCV_CC)) ld.lld
 
-test: $(TARGET) $(TEST_ELFS) $(LOADER_TEST)
+test: $(TARGET) $(TEST_ELFS) $(HOST_TESTS)
 	sh tests/run-tests.sh $(TARGET) $(TEST_BUILD_DIR)
 	$(LOADER_TEST)
+	$(ENCODING_TEST)
 
 clean:
 	rm -rf build

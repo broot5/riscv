@@ -129,7 +129,7 @@ FetchResult_t fetch_instruction(CPU_t *cpu) {
 
   if (!is_compressed(lower)) {
     uint16_t upper = read_half(cpu, cpu->pc + 2);
-    return (FetchResult_t){lower | (upper << 16), 4};
+    return (FetchResult_t){(uint32_t)lower | ((uint32_t)upper << 16), 4};
   }
   return (FetchResult_t){lower, 2};
 }
