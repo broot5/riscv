@@ -1,9 +1,9 @@
 #ifndef INSTRUCTIONS_M_H
 #define INSTRUCTIONS_M_H
 
-#include <stdint.h>
-
 #include "rv_context.h"
+
+#include <stdint.h>
 
 void handle_mul(uint32_t inst, RvContext_t *context);
 void handle_mulh(uint32_t inst, RvContext_t *context);

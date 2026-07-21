@@ -5,6 +5,8 @@ ifeq ($(origin CC), default)
 CC := clang
 endif
 
+CLANG_FORMAT ?= clang-format
+
 CPPFLAGS += -Iinclude
 CFLAGS += -Wall -Wextra -Wshadow -g -O2 -MMD -MP
 LDFLAGS ?=
@@ -18,6 +20,10 @@ TARGET := $(BUILD_DIR)/riscv
 SRCS := $(wildcard src/*.c)
 OBJS := $(patsubst src/%.c,$(HOST_BUILD_DIR)/%.o,$(SRCS))
 DEPS := $(OBJS:.o=.d)
+FORMAT_FILES := $(wildcard src/*.c) \
+	$(wildcard include/*.h) \
+	$(wildcard include/instructions/*.h) \
+	$(wildcard tests/*.c)
 
 RISCV_CC ?= clang
 RISCV_CPPFLAGS := -Itests/include
@@ -66,9 +72,15 @@ test: $(TARGET) $(TEST_ELFS) $(HOST_TESTS)
 	$(ENCODING_TEST)
 	$(DECODER_TEST)
 
+format:
+	$(CLANG_FORMAT) -i $(FORMAT_FILES)
+
+format-check:
+	$(CLANG_FORMAT) --dry-run --Werror $(FORMAT_FILES)
+
 clean:
 	rm -rf build
 
 -include $(DEPS)
 
-.PHONY: all test clean check-host-tools check-test-tools
+.PHONY: all test format format-check clean check-host-tools check-test-tools

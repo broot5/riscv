@@ -1,9 +1,9 @@
 #ifndef INSTRUCTIONS_H
 #define INSTRUCTIONS_H
 
-#include <stdint.h>
-
 #include "rv_context.h"
+
+#include <stdint.h>
 
 void handle_lui(uint32_t inst, RvContext_t *context);
 void handle_auipc(uint32_t inst, RvContext_t *context);

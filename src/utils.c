@@ -2,13 +2,9 @@
 
 uint8_t get_opcode(uint32_t inst) { return (uint8_t)(inst & 0x7F); }
 
-uint8_t get_funct3(uint32_t inst) {
-  return (uint8_t)((inst >> 12) & 0x7);
-}
+uint8_t get_funct3(uint32_t inst) { return (uint8_t)((inst >> 12) & 0x7); }
 
-uint8_t get_funct7(uint32_t inst) {
-  return (uint8_t)((inst >> 25) & 0x7F);
-}
+uint8_t get_funct7(uint32_t inst) { return (uint8_t)((inst >> 25) & 0x7F); }
 
 uint8_t get_rd(uint32_t inst) { return (uint8_t)((inst >> 7) & 0x1F); }
 
@@ -18,8 +14,7 @@ uint8_t get_rs2(uint32_t inst) { return (uint8_t)((inst >> 20) & 0x1F); }
 
 int32_t sign_extend(uint32_t value, int num_bits) {
   uint32_t sign_bit = UINT32_C(1) << (num_bits - 1);
-  uint32_t mask =
-      num_bits == 32 ? UINT32_MAX : (UINT32_C(1) << num_bits) - 1;
+  uint32_t mask = num_bits == 32 ? UINT32_MAX : (UINT32_C(1) << num_bits) - 1;
   value &= mask;
 
   if ((value & sign_bit) != 0)
@@ -78,8 +73,7 @@ uint32_t build_s_type(uint32_t opcode, uint32_t funct3, uint32_t rs1,
                       uint32_t rs2, int32_t imm) {
   uint32_t imm_bits = (uint32_t)imm;
   return opcode | ((imm_bits & UINT32_C(0x1F)) << 7) | (funct3 << 12) |
-         (rs1 << 15) | (rs2 << 20) |
-         (((imm_bits >> 5) & UINT32_C(0x7F)) << 25);
+         (rs1 << 15) | (rs2 << 20) | (((imm_bits >> 5) & UINT32_C(0x7F)) << 25);
 }
 
 uint32_t build_b_type(uint32_t opcode, uint32_t funct3, uint32_t rs1,
@@ -98,8 +92,7 @@ uint32_t build_u_type(uint32_t opcode, uint32_t rd, int32_t imm) {
 
 uint32_t build_j_type(uint32_t opcode, uint32_t rd, int32_t imm) {
   uint32_t imm_bits = (uint32_t)imm;
-  return opcode | (rd << 7) |
-         (((imm_bits >> 12) & UINT32_C(0xFF)) << 12) |
+  return opcode | (rd << 7) | (((imm_bits >> 12) & UINT32_C(0xFF)) << 12) |
          (((imm_bits >> 11) & UINT32_C(0x1)) << 20) |
          (((imm_bits >> 1) & UINT32_C(0x3FF)) << 21) |
          (((imm_bits >> 20) & UINT32_C(0x1)) << 31);

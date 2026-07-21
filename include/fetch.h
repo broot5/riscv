@@ -1,10 +1,10 @@
 #ifndef FETCH_H
 #define FETCH_H
 
+#include "memory.h"
+
 #include <stdbool.h>
 #include <stdint.h>
-
-#include "memory.h"
 
 typedef struct FetchResult {
   uint32_t inst;

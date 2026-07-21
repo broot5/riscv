@@ -1,13 +1,13 @@
+#include "cpu.h"
+#include "emulator.h"
+#include "loader.h"
+#include "memory.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-
-#include "cpu.h"
-#include "emulator.h"
-#include "loader.h"
-#include "memory.h"
 
 int main(int argc, char *argv[]) {
   if (argc < 2) {

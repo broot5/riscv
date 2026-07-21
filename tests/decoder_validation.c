@@ -1,14 +1,14 @@
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "cpu.h"
 #include "decoder.h"
 #include "memory.h"
 #include "opcodes.h"
 #include "rv_context.h"
 #include "utils.h"
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 static bool test_valid_addi(void) {
   CPU_t cpu;

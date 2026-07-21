@@ -1,10 +1,10 @@
+#include "loader.h"
+
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#include "loader.h"
 
 void load_elf(CPU_t *cpu, Memory_t *memory, const char *filename) {
   FILE *fp = fopen(filename, "rb");

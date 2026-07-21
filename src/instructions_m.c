@@ -1,9 +1,9 @@
 #include "instructions/instructions_m.h"
 
+#include "utils.h"
+
 #include <limits.h>
 #include <stdint.h>
-
-#include "utils.h"
 
 void handle_mul(uint32_t inst, RvContext_t *context) {
   CPU_t *cpu = context->cpu;

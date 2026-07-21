@@ -1,10 +1,10 @@
 #include "instructions/instructions.h"
 
-#include <stdint.h>
-#include <stdio.h>
-
 #include "syscall.h"
 #include "utils.h"
+
+#include <stdint.h>
+#include <stdio.h>
 
 static void stop_on_memory_error(CPU_t *cpu) {
   cpu->exit_code = 1;

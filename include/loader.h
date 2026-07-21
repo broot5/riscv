@@ -1,10 +1,10 @@
 #ifndef LOADER_H
 #define LOADER_H
 
-#include <stdint.h>
-
 #include "cpu.h"
 #include "memory.h"
+
+#include <stdint.h>
 
 #define EI_CLASS 4
 #define ELFCLASS32 1

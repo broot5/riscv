@@ -1,13 +1,13 @@
+#include "cpu.h"
+#include "loader.h"
+#include "memory.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#include "cpu.h"
-#include "loader.h"
-#include "memory.h"
 
 static const uint32_t test_vaddr = 0x00010000;
 

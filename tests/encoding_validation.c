@@ -1,14 +1,14 @@
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "compressed_decoder.h"
 #include "cpu.h"
 #include "fetch.h"
 #include "memory.h"
 #include "opcodes.h"
 #include "utils.h"
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 static bool test_sign_extension(void) {
   return sign_extend(UINT32_C(0x7ff), 12) == 2047 &&

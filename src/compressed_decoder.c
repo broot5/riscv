@@ -29,22 +29,16 @@ static int32_t get_imm_ci(uint16_t c_inst) {
 }
 
 static int32_t get_imm_cj(uint16_t c_inst) {
-  uint32_t imm = ((c_inst >> 3) & 0x7) << 1 |
-                 ((c_inst >> 11) & 0x1) << 4 |
-                 ((c_inst >> 2) & 0x1) << 5 |
-                 ((c_inst >> 7) & 0x1) << 6 |
-                 ((c_inst >> 6) & 0x1) << 7 |
-                 ((c_inst >> 9) & 0x3) << 8 |
-                 ((c_inst >> 8) & 0x1) << 10 |
-                 ((c_inst >> 12) & 0x1) << 11;
+  uint32_t imm = ((c_inst >> 3) & 0x7) << 1 | ((c_inst >> 11) & 0x1) << 4 |
+                 ((c_inst >> 2) & 0x1) << 5 | ((c_inst >> 7) & 0x1) << 6 |
+                 ((c_inst >> 6) & 0x1) << 7 | ((c_inst >> 9) & 0x3) << 8 |
+                 ((c_inst >> 8) & 0x1) << 10 | ((c_inst >> 12) & 0x1) << 11;
   return sign_extend(imm, 12);
 }
 
 static int32_t get_imm_cb(uint16_t c_inst) {
-  uint32_t imm = ((c_inst >> 3) & 0x3) << 1 |
-                 ((c_inst >> 10) & 0x3) << 3 |
-                 ((c_inst >> 2) & 0x1) << 5 |
-                 ((c_inst >> 5) & 0x3) << 6 |
+  uint32_t imm = ((c_inst >> 3) & 0x3) << 1 | ((c_inst >> 10) & 0x3) << 3 |
+                 ((c_inst >> 2) & 0x1) << 5 | ((c_inst >> 5) & 0x3) << 6 |
                  ((c_inst >> 12) & 0x1) << 8;
   return sign_extend(imm, 9);
 }
@@ -62,8 +56,7 @@ static uint32_t expand_illegal(uint16_t c_inst) {
 static uint32_t expand_ciw_addi4spn(uint16_t c_inst) {
   uint8_t rd = get_c_rd_prime_reg(c_inst);
   uint32_t imm = ((c_inst >> 6) & 0x1) | ((c_inst >> 5) & 0x1) << 1 |
-                 ((c_inst >> 11) & 0x3) << 2 |
-                 ((c_inst >> 7) & 0xF) << 4;
+                 ((c_inst >> 11) & 0x3) << 2 | ((c_inst >> 7) & 0xF) << 4;
   if (imm == 0)
     return 0;
 
@@ -125,8 +118,7 @@ static uint32_t expand_cb_ca_misc_alu(uint16_t c_inst) {
 
   switch (sub_funct) {
   case 0b00:
-    return build_i_type(OPCODE_OP_IMM, rs1_prime, 0b101, rs1_prime,
-                        imm & 0x3F);
+    return build_i_type(OPCODE_OP_IMM, rs1_prime, 0b101, rs1_prime, imm & 0x3F);
   case 0b01:
     return build_i_type(OPCODE_OP_IMM, rs1_prime, 0b101, rs1_prime,
                         (imm & 0x3F) | 0x400);
@@ -134,8 +126,7 @@ static uint32_t expand_cb_ca_misc_alu(uint16_t c_inst) {
     return build_i_type(OPCODE_OP_IMM, rs1_prime, 0b111, rs1_prime, imm);
   case 0b11: {
     uint8_t rs2 = get_c_rs2_prime_reg(c_inst);
-    uint8_t op_funct = ((c_inst >> 5) & 0x3) |
-                       ((c_inst >> 12) & 0x1) << 2;
+    uint8_t op_funct = ((c_inst >> 5) & 0x3) | ((c_inst >> 12) & 0x1) << 2;
     switch (op_funct) {
     case 0:
       return build_r_type(OPCODE_OP, rs1_prime, 0b000, rs1_prime, rs2, 0x20);
@@ -176,8 +167,7 @@ static uint32_t expand_ci_slli(uint16_t c_inst) {
 
 static uint32_t expand_ci_lwsp(uint16_t c_inst) {
   uint8_t rd = get_c_rd(c_inst);
-  uint32_t imm = ((c_inst >> 4) & 0x7) |
-                 ((c_inst >> 12) & 0x1) << 3 |
+  uint32_t imm = ((c_inst >> 4) & 0x7) | ((c_inst >> 12) & 0x1) << 3 |
                  ((c_inst >> 2) & 0x3) << 4;
   if (rd == 0)
     return 0;
@@ -207,8 +197,7 @@ static uint32_t expand_cr_jr_mv_add(uint16_t c_inst) {
 
 static uint32_t expand_css_swsp(uint16_t c_inst) {
   uint8_t rs2 = get_c_rs2(c_inst);
-  uint32_t imm = ((c_inst >> 9) & 0xF) |
-                 ((c_inst >> 7) & 0x3) << 4;
+  uint32_t imm = ((c_inst >> 9) & 0xF) | ((c_inst >> 7) & 0x3) << 4;
   return build_s_type(OPCODE_STORE, 0b010, 2, rs2, imm << 2);
 }
 
